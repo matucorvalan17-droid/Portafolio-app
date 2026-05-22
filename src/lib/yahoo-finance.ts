@@ -1,13 +1,8 @@
-import yahooFinance from 'yahoo-finance2';
+import YahooFinanceClass from 'yahoo-finance2';
 import type { Quote, SearchResult, ChartDataPoint } from '@/types';
 
-// Suppress yahoo-finance2 validation notices
-yahooFinance.setGlobalConfig({
-  validation: {
-    logErrors: false,
-    logOptionsErrors: false,
-  },
-});
+// Create an instance to use for method calls
+const yf = new YahooFinanceClass();
 
 export async function getQuotes(tickers: string[]): Promise<Record<string, Quote>> {
   if (!tickers.length) return {};
@@ -17,7 +12,8 @@ export async function getQuotes(tickers: string[]): Promise<Record<string, Quote
   await Promise.allSettled(
     tickers.map(async (ticker) => {
       try {
-        const quote = await yahooFinance.quote(ticker, {}, { validateResult: false });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const quote = await (yf as any).quote(ticker);
         if (quote) {
           results[ticker] = {
             ticker,
@@ -31,7 +27,7 @@ export async function getQuotes(tickers: string[]): Promise<Record<string, Quote
           };
         }
       } catch {
-        // If we can't get a quote, skip it silently
+        // If we can't get a quote, return zeros
         results[ticker] = {
           ticker,
           price: 0,
@@ -49,7 +45,8 @@ export async function getQuotes(tickers: string[]): Promise<Record<string, Quote
 
 export async function getQuote(ticker: string): Promise<Quote | null> {
   try {
-    const quote = await yahooFinance.quote(ticker, {}, { validateResult: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const quote = await (yf as any).quote(ticker);
     if (!quote) return null;
 
     return {
@@ -71,19 +68,20 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
   if (!query || query.length < 1) return [];
 
   try {
-    const searchResults = await yahooFinance.search(query, {}, { validateResult: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const searchResults = await (yf as any).autoc(query);
 
     const results: SearchResult[] = [];
 
-    if (searchResults.quotes) {
-      for (const item of searchResults.quotes) {
-        if (item.symbol && item.quoteType !== 'OPTION' && item.quoteType !== 'CURRENCY') {
+    if (searchResults?.Result) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const item of searchResults.Result as any[]) {
+        if (item.symbol) {
           results.push({
             symbol: item.symbol,
-            name: item.longname ?? item.shortname ?? item.symbol,
-            exchange: item.exchDisp ?? item.exchange ?? '',
-            type: mapQuoteType(item.quoteType ?? ''),
-            score: item.score,
+            name: item.name ?? item.symbol,
+            exchange: item.exch ?? item.exchDisp ?? '',
+            type: mapType(item.typeDisp ?? item.type ?? ''),
           });
         }
       }
@@ -91,23 +89,17 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
 
     return results.slice(0, 10);
   } catch {
+    // Fall back to an empty result on error
     return [];
   }
 }
 
-function mapQuoteType(quoteType: string): string {
-  switch (quoteType.toUpperCase()) {
-    case 'EQUITY':
-      return 'stock';
-    case 'ETF':
-      return 'etf';
-    case 'MUTUALFUND':
-      return 'fund';
-    case 'CRYPTOCURRENCY':
-      return 'crypto';
-    default:
-      return 'stock';
-  }
+function mapType(typeStr: string): string {
+  const t = typeStr.toLowerCase();
+  if (t.includes('etf')) return 'etf';
+  if (t.includes('mutual') || t.includes('fund')) return 'fund';
+  if (t.includes('crypto') || t.includes('currency')) return 'crypto';
+  return 'stock';
 }
 
 export async function getHistoricalData(
@@ -133,18 +125,16 @@ export async function getHistoricalData(
         break;
     }
 
-    const historical = await yahooFinance.historical(
-      ticker,
-      {
-        period1: startDate.toISOString().split('T')[0],
-        period2: endDate.toISOString().split('T')[0],
-        interval: '1d',
-      },
-      { validateResult: false }
-    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const historical: any[] = await (yf as any).historical(ticker, {
+      period1: startDate.toISOString().split('T')[0],
+      period2: endDate.toISOString().split('T')[0],
+      interval: '1d',
+    });
 
-    return historical.map((item) => ({
-      date: item.date.toISOString().split('T')[0],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (historical || []).map((item: any) => ({
+      date: new Date(item.date).toISOString().split('T')[0],
       value: item.close ?? item.adjClose ?? 0,
     }));
   } catch {
