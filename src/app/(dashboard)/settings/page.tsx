@@ -33,7 +33,7 @@ export default function SettingsPage() {
 
   const [name,       setName]       = useState(session?.user?.name  ?? '');
   const [email,      setEmail]      = useState(session?.user?.email ?? '');
-  const [avatarSrc,  setAvatarSrc]  = useState<string>(session?.user?.image ?? '');
+  const [avatarSrc,  setAvatarSrc]  = useState<string>((session?.user as { image?: string | null } | undefined)?.image ?? '');
   const [profileLoading, setProfileLoading] = useState(false);
 
   const [currentPassword,    setCurrentPassword]    = useState('');
