@@ -1,46 +1,100 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// WealthTrack - Prisma Database Schema
+// This file defines your entire database structure.
+// To apply changes: run `npm run db:push` in your terminal.
+// Learn more: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  // PostgreSQL is used for production (Neon, Supabase, Railway, etc.)
+  // Set DATABASE_URL in your .env.local file
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// ─── USER ────────────────────────────────────────────────────────────────────
+// Each person who signs up gets one User record.
+// You will rarely need to edit this model.
 model User {
-  id         String      @id @default(cuid())
-  email      String      @unique
-  password   String
-  name       String
-  createdAt  DateTime    @default(now())
-  portfolios Portfolio[]
+  id           String          @id @default(cuid())
+  email        String          @unique
+  password     String
+  name         String
+  currency     String          @default("USD")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  portfolios   Portfolio[]
+  watchlist    WatchlistItem[]
 }
 
+// ─── PORTFOLIO ───────────────────────────────────────────────────────────────
+// A portfolio is a named bucket of investments (e.g. "Robinhood", "Crypto").
+// One user can have many portfolios.
 model Portfolio {
-  id        String    @id @default(cuid())
-  name      String
-  userId    String
-  currency  String    @default("USD")
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  holdings  Holding[]
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  userId       String
+  currency     String        @default("USD")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings     Holding[]
+  transactions Transaction[]
 }
 
+// ─── HOLDING ─────────────────────────────────────────────────────────────────
+// A holding is one stock/ETF/crypto position inside a portfolio.
+// Ticker = the stock symbol (e.g. AAPL, BTC-USD, SPY)
 model Holding {
   id          String    @id @default(cuid())
   portfolioId String
   ticker      String
   name        String
   shares      Float
-  avgCost     Float
+  avgCost     Float     // average cost per share in USD
   broker      String?
-  assetType   String    @default("stock")
+  assetType   String    @default("stock") // stock | etf | crypto | fund | other
   currency    String    @default("USD")
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+}
+
+// ─── TRANSACTION ─────────────────────────────────────────────────────────────
+// A transaction is a single buy, sell, or dividend event.
+// This creates a history log of all your trades.
+model Transaction {
+  id          String    @id @default(cuid())
+  portfolioId String
+  ticker      String
+  name        String
+  type        String    // "buy" | "sell" | "dividend"
+  shares      Float
+  price       Float     // price per share at time of transaction
+  total       Float     // total value (shares × price)
+  fee         Float     @default(0) // brokerage fee
+  date        DateTime
+  broker      String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+}
+
+// ─── WATCHLIST ───────────────────────────────────────────────────────────────
+// A watchlist lets you track stocks you're interested in but haven't bought yet.
+model WatchlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  ticker    String
+  name      String
+  notes     String?
+  alertPrice Float?  // optional price alert target
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ticker]) // can't add same ticker twice
 }

@@ -3,10 +3,15 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'PortfolioIQ - Track Your Investments',
+  title: 'WealthTrack — Smart Portfolio Tracker',
   description:
-    'Track stocks, ETFs, crypto, and funds from multiple brokers in one place with real-time prices.',
-  keywords: 'portfolio tracker, stocks, ETF, crypto, investments, finance',
+    'Track stocks, ETFs, crypto, and funds from all your brokers in one sleek dashboard. Real-time prices, beautiful charts, and detailed analytics.',
+  keywords: 'portfolio tracker, investment tracker, stocks, ETF, crypto, wealth management',
+  openGraph: {
+    title: 'WealthTrack — Smart Portfolio Tracker',
+    description: 'Track all your investments in one place.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({

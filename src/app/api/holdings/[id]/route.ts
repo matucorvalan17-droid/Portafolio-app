@@ -1,3 +1,9 @@
+// WealthTrack — Holding [id] API
+// GET    /api/holdings/:id  → get a single holding
+// PUT    /api/holdings/:id  → update a holding (shares, avg cost, etc.)
+// DELETE /api/holdings/:id  → delete a holding
+// You don't need to edit this file.
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -5,28 +11,22 @@ import { db } from '@/lib/db';
 
 async function getHoldingForUser(id: string, userId: string) {
   return db.holding.findFirst({
-    where: {
-      id,
-      portfolio: { userId },
-    },
+    where: { id, portfolio: { userId } },
   });
 }
 
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const holding = await getHoldingForUser(params.id, session.user.id);
-    if (!holding) {
-      return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
-    }
-
+    const holding = await getHoldingForUser(id, session.user.id);
+    if (!holding) return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
     return NextResponse.json(holding);
   } catch (error) {
     console.error('GET /api/holdings/[id] error:', error);
@@ -35,34 +35,31 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const existing = await getHoldingForUser(id, session.user.id);
+    if (!existing) return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
 
-    const existing = await getHoldingForUser(params.id, session.user.id);
-    if (!existing) {
-      return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
-    }
-
-    const body = await request.json();
-    const { ticker, name, shares, avgCost, broker, assetType, currency, notes } = body;
+    const { ticker, name, shares, avgCost, broker, assetType, currency, notes } = await req.json();
 
     const updated = await db.holding.update({
-      where: { id: params.id },
+      where: { id },
       data: {
-        ...(ticker && { ticker: ticker.toUpperCase().trim() }),
-        ...(name && { name: name.trim() }),
-        ...(shares !== undefined && { shares: parseFloat(shares) }),
-        ...(avgCost !== undefined && { avgCost: parseFloat(avgCost) }),
-        broker: broker?.trim() || null,
-        ...(assetType && { assetType }),
-        ...(currency && { currency }),
-        notes: notes?.trim() || null,
+        ...(ticker   && { ticker: ticker.toUpperCase().trim() }),
+        ...(name     && { name: name.trim() }),
+        ...(shares   !== undefined && { shares: parseFloat(shares) }),
+        ...(avgCost  !== undefined && { avgCost: parseFloat(avgCost) }),
+        broker:    broker?.trim() || null,
+        ...(assetType  && { assetType }),
+        ...(currency   && { currency }),
+        notes:     notes?.trim() || null,
       },
     });
 
@@ -74,23 +71,20 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const existing = await getHoldingForUser(id, session.user.id);
+    if (!existing) return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
 
-    const existing = await getHoldingForUser(params.id, session.user.id);
-    if (!existing) {
-      return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
-    }
-
-    await db.holding.delete({ where: { id: params.id } });
-
-    return NextResponse.json({ message: 'Holding deleted successfully' });
+    await db.holding.delete({ where: { id } });
+    return NextResponse.json({ message: 'Holding deleted' });
   } catch (error) {
     console.error('DELETE /api/holdings/[id] error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

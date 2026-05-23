@@ -1,16 +1,17 @@
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: Date;
-}
+// WealthTrack — TypeScript Types
+// This file defines the shapes of all your data objects.
+// You don't need to edit this unless you add new database fields.
+
+// ─── DATABASE MODELS ─────────────────────────────────────────────────────────
 
 export interface Portfolio {
   id: string;
   name: string;
+  description?: string;
   userId: string;
   currency: string;
-  createdAt: Date;
+  createdAt: string;
+  updatedAt: string;
   holdings?: Holding[];
 }
 
@@ -22,12 +23,46 @@ export interface Holding {
   shares: number;
   avgCost: number;
   broker?: string | null;
-  assetType: string;
+  assetType: AssetType;
   currency: string;
   notes?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export interface Transaction {
+  id: string;
+  portfolioId: string;
+  ticker: string;
+  name: string;
+  type: TransactionType;
+  shares: number;
+  price: number;
+  total: number;
+  fee: number;
+  date: string;
+  broker?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  portfolio?: Portfolio;
+}
+
+export interface WatchlistItem {
+  id: string;
+  userId: string;
+  ticker: string;
+  name: string;
+  notes?: string | null;
+  alertPrice?: number | null;
+  createdAt: string;
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+export type AssetType = 'stock' | 'etf' | 'crypto' | 'fund' | 'other';
+export type TransactionType = 'buy' | 'sell' | 'dividend';
+
+// ─── MARKET DATA (from Yahoo Finance) ────────────────────────────────────────
 
 export interface Quote {
   ticker: string;
@@ -38,22 +73,8 @@ export interface Quote {
   name: string;
   marketCap?: number;
   volume?: number;
-}
-
-export interface HoldingWithQuote extends Holding {
-  currentPrice?: number;
-  currentValue?: number;
-  gainLoss?: number;
-  gainLossPercent?: number;
-  quote?: Quote;
-}
-
-export interface PortfolioWithStats extends Portfolio {
-  totalValue: number;
-  totalCost: number;
-  totalGainLoss: number;
-  totalGainLossPercent: number;
-  holdingsCount: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
 }
 
 export interface SearchResult {
@@ -63,17 +84,6 @@ export interface SearchResult {
   type: string;
   score?: number;
 }
-
-export interface CSVHolding {
-  ticker: string;
-  shares: number;
-  avgCost: number;
-  broker?: string;
-  name?: string;
-  assetType?: string;
-}
-
-export type AssetType = 'stock' | 'crypto' | 'etf' | 'fund';
 
 export interface ChartDataPoint {
   date: string;
@@ -89,15 +99,38 @@ export interface AllocationDataPoint {
   ticker: string;
 }
 
-export interface DashboardStats {
+// ─── COMPUTED STATS ──────────────────────────────────────────────────────────
+
+export interface HoldingWithQuote extends Holding {
+  currentPrice?: number;
+  currentValue?: number;
+  gainLoss?: number;
+  gainLossPercent?: number;
+  dayChange?: number;
+  dayChangePercent?: number;
+  allocation?: number;
+  quote?: Quote;
+}
+
+export interface PortfolioWithStats extends Portfolio {
   totalValue: number;
   totalCost: number;
   totalGainLoss: number;
   totalGainLossPercent: number;
-  portfolios: PortfolioWithStats[];
+  holdingsCount: number;
 }
 
-// NextAuth type extensions
+export interface CSVHolding {
+  ticker: string;
+  shares: number;
+  avgCost: number;
+  broker?: string;
+  name?: string;
+  assetType?: string;
+}
+
+// ─── NEXTAUTH TYPE EXTENSIONS ─────────────────────────────────────────────────
+
 declare module 'next-auth' {
   interface Session {
     user: {
@@ -106,7 +139,6 @@ declare module 'next-auth' {
       name: string;
     };
   }
-
   interface User {
     id: string;
     email: string;
