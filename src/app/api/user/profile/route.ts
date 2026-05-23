@@ -11,16 +11,29 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { name, email, image } = body;
 
-    if (!name || !name.trim()) {
+    if (!name?.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    if (email && email !== session.user.email) {
+      const exists = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+      if (exists) {
+        return NextResponse.json({ error: 'That email is already in use' }, { status: 409 });
+      }
+    }
+
+    const updateData: { name: string; email?: string; image?: string } = {
+      name: name.trim(),
+    };
+    if (email?.trim()) updateData.email = email.trim().toLowerCase();
+    if (image !== undefined) updateData.image = image;
+
     const user = await db.user.update({
       where: { id: session.user.id },
-      data: { name: name.trim() },
-      select: { id: true, email: true, name: true },
+      data: updateData,
+      select: { id: true, email: true, name: true, image: true },
     });
 
     return NextResponse.json(user);

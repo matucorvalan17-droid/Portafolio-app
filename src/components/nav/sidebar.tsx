@@ -27,6 +27,7 @@ interface SidebarProps {
   portfolios: Portfolio[];
   userName: string;
   userEmail: string;
+  userImage?: string | null;
   onNewPortfolio: () => void;
 }
 
@@ -39,7 +40,7 @@ const topNavItems = [
   { href: '/watchlist',    icon: Star,             label: 'Watchlist'    },
 ];
 
-export function Sidebar({ portfolios, userName, userEmail, onNewPortfolio }: SidebarProps) {
+export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortfolio }: SidebarProps) {
   const pathname = usePathname();
   const [portfoliosOpen, setPortfoliosOpen] = useState(true);
 
@@ -59,10 +60,14 @@ export function Sidebar({ portfolios, userName, userEmail, onNewPortfolio }: Sid
       {/* ── User Info ────────────────────────────────────────────── */}
       <div className="px-4 py-4 border-b border-border">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-surface-2">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-semibold text-primary">
-              {userName.charAt(0).toUpperCase()}
-            </span>
+          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+            {userImage ? (
+              <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">{userName.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">{userName}</p>

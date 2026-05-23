@@ -83,6 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         portfolios={portfolios}
         userName={session.user.name}
         userEmail={session.user.email}
+        userImage={session.user.image}
         onNewPortfolio={() => setNewPortfolioOpen(true)}
       />
 
