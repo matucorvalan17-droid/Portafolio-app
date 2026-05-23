@@ -22,6 +22,7 @@ model User {
   email        String          @unique
   password     String
   name         String
+  image        String?
   currency     String          @default("USD")
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -36,6 +37,7 @@ model Portfolio {
   id           String        @id @default(cuid())
   name         String
   description  String?
+  image        String?
   userId       String
   currency     String        @default("USD")
   createdAt    DateTime      @default(now())
@@ -49,19 +51,20 @@ model Portfolio {
 // A holding is one stock/ETF/crypto position inside a portfolio.
 // Ticker = the stock symbol (e.g. AAPL, BTC-USD, SPY)
 model Holding {
-  id          String    @id @default(cuid())
-  portfolioId String
-  ticker      String
-  name        String
-  shares      Float
-  avgCost     Float     // average cost per share in USD
-  broker      String?
-  assetType   String    @default("stock") // stock | etf | crypto | fund | other
-  currency    String    @default("USD")
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  portfolioId  String
+  ticker       String
+  name         String
+  shares       Float
+  avgCost      Float     // average cost per share in USD
+  purchaseDate DateTime?
+  broker       String?
+  assetType    String    @default("stock") // stock | etf | crypto | fund | other
+  currency     String    @default("USD")
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  portfolio    Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 }
 
 // ─── TRANSACTION ─────────────────────────────────────────────────────────────

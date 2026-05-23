@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { portfolioId, ticker, name, shares, avgCost, broker, assetType, currency, notes } = body;
+    const { portfolioId, ticker, name, shares, avgCost, purchaseDate, broker, assetType, currency, notes } = body;
 
     if (!portfolioId || !ticker || !name || shares === undefined || avgCost === undefined) {
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         shares: parseFloat(shares),
         avgCost: parseFloat(avgCost),
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
         broker: broker?.trim() || null,
         assetType: assetType || 'stock',
         currency: currency || portfolio.currency || 'USD',
