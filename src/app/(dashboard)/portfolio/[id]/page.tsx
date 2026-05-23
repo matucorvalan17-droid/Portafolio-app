@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft, Pencil, ImagePlus, X } from 'lucide-react';
 import Link from 'next/link';
 import { AssetTable } from '@/components/portfolio/asset-table';
+import { TransactionHistory } from '@/components/portfolio/transaction-history';
 import { AddAssetModal } from '@/components/portfolio/add-asset-modal';
 import { EditAssetModal } from '@/components/portfolio/edit-asset-modal';
 import { ImportCSVModal } from '@/components/portfolio/import-csv-modal';
@@ -29,6 +30,7 @@ export default function PortfolioPage() {
   const [pricesLoading,  setPricesLoading]  = useState(false);
   const [refreshing,     setRefreshing]     = useState(false);
 
+  const [activeTab,       setActiveTab]       = useState<'holdings' | 'transactions'>('holdings');
   const [addModalOpen,    setAddModalOpen]    = useState(false);
   const [editModalOpen,   setEditModalOpen]   = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -311,25 +313,48 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Holdings table */}
+      {/* Holdings / Transactions tabs */}
       <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-text-primary">Holdings</h2>
-            {pricesLoading && <Spinner size="sm" />}
+        {/* Tab bar */}
+        <div className="flex items-center justify-between px-6 py-0 border-b border-border">
+          <div className="flex items-center gap-1">
+            {([
+              { key: 'holdings',     label: 'Holdings'      },
+              { key: 'transactions', label: 'Transacciones' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+            {activeTab === 'holdings' && pricesLoading && <Spinner size="sm" className="ml-2" />}
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setAddModalOpen(true)}>
-            <Plus className="w-3.5 h-3.5" />
-            Add
-          </Button>
+          {activeTab === 'holdings' && (
+            <Button size="sm" variant="ghost" onClick={() => setAddModalOpen(true)}>
+              <Plus className="w-3.5 h-3.5" />
+              Add
+            </Button>
+          )}
         </div>
-        <AssetTable
-          holdings={holdings}
-          quotes={quotes}
-          loading={pricesLoading}
-          onEdit={(holding) => { setEditingHolding(holding); setEditModalOpen(true); }}
-          onDelete={handleDeleteHolding}
-        />
+
+        {activeTab === 'holdings' ? (
+          <AssetTable
+            holdings={holdings}
+            quotes={quotes}
+            loading={pricesLoading}
+            onEdit={(holding) => { setEditingHolding(holding); setEditModalOpen(true); }}
+            onDelete={handleDeleteHolding}
+          />
+        ) : (
+          <TransactionHistory portfolioId={portfolioId} />
+        )}
       </div>
 
       {/* Modals */}
