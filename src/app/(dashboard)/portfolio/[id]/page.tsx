@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft } from 'lucide-react';
+import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft, Pencil, ImagePlus, X } from 'lucide-react';
 import Link from 'next/link';
 import { AssetTable } from '@/components/portfolio/asset-table';
 import { AddAssetModal } from '@/components/portfolio/add-asset-modal';
 import { EditAssetModal } from '@/components/portfolio/edit-asset-modal';
 import { ImportCSVModal } from '@/components/portfolio/import-csv-modal';
 import { AllocationChart } from '@/components/charts/allocation-chart';
+import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { LoadingPage, Spinner } from '@/components/ui/loading';
 import { formatCurrency, formatPercent, ALLOCATION_COLORS } from '@/lib/utils';
+import { compressImage } from '@/lib/compress-image';
 import type { Portfolio, Holding, Quote, AllocationDataPoint } from '@/types';
 
 export default function PortfolioPage() {
@@ -19,17 +22,24 @@ export default function PortfolioPage() {
   const router = useRouter();
   const portfolioId = params.id as string;
 
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [quotes, setQuotes] = useState<Record<string, Quote>>({});
-  const [loading, setLoading] = useState(true);
-  const [pricesLoading, setPricesLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [portfolio,      setPortfolio]      = useState<Portfolio | null>(null);
+  const [holdings,       setHoldings]       = useState<Holding[]>([]);
+  const [quotes,         setQuotes]         = useState<Record<string, Quote>>({});
+  const [loading,        setLoading]        = useState(true);
+  const [pricesLoading,  setPricesLoading]  = useState(false);
+  const [refreshing,     setRefreshing]     = useState(false);
 
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addModalOpen,    setAddModalOpen]    = useState(false);
+  const [editModalOpen,   setEditModalOpen]   = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
+  const [editingHolding,  setEditingHolding]  = useState<Holding | null>(null);
+
+  // Edit portfolio modal
+  const [editPortfolioOpen,    setEditPortfolioOpen]    = useState(false);
+  const [editPortfolioName,    setEditPortfolioName]    = useState('');
+  const [editPortfolioImage,   setEditPortfolioImage]   = useState('');
+  const [editPortfolioLoading, setEditPortfolioLoading] = useState(false);
+  const editImageRef = useRef<HTMLInputElement>(null);
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -89,7 +99,6 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     loadAll();
-    // Auto-refresh prices every 30 seconds
     const interval = setInterval(() => {
       if (holdings.length > 0) fetchPrices(holdings);
     }, 30000);
@@ -122,33 +131,76 @@ export default function PortfolioPage() {
     }
   };
 
+  const openEditPortfolio = () => {
+    setEditPortfolioName(portfolio?.name ?? '');
+    setEditPortfolioImage(portfolio?.image ?? '');
+    setEditPortfolioOpen(true);
+  };
+
+  const handleEditPortfolioImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    try {
+      const compressed = await compressImage(file, 128);
+      setEditPortfolioImage(compressed);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleEditPortfolioSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPortfolioName.trim()) return;
+    setEditPortfolioLoading(true);
+    try {
+      const res = await fetch(`/api/portfolios/${portfolioId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:  editPortfolioName.trim(),
+          image: editPortfolioImage || null,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPortfolio(data);
+        setEditPortfolioOpen(false);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setEditPortfolioLoading(false);
+    }
+  };
+
   // Calculate portfolio stats
   let totalValue = 0;
-  let totalCost = 0;
+  let totalCost  = 0;
 
   for (const holding of holdings) {
-    const quote = quotes[holding.ticker];
+    const quote        = quotes[holding.ticker];
     const currentPrice = quote?.price ?? 0;
     totalValue += currentPrice > 0 ? currentPrice * holding.shares : holding.avgCost * holding.shares;
-    totalCost += holding.avgCost * holding.shares;
+    totalCost  += holding.avgCost * holding.shares;
   }
 
-  const totalGainLoss = totalValue - totalCost;
+  const totalGainLoss        = totalValue - totalCost;
   const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
-  const isPositive = totalGainLoss >= 0;
+  const isPositive           = totalGainLoss >= 0;
 
   // Build allocation data
   const allocationData: AllocationDataPoint[] = holdings
     .map((holding, index) => {
-      const quote = quotes[holding.ticker];
+      const quote        = quotes[holding.ticker];
       const currentPrice = quote?.price ?? 0;
-      const value = currentPrice > 0 ? currentPrice * holding.shares : holding.avgCost * holding.shares;
+      const value        = currentPrice > 0 ? currentPrice * holding.shares : holding.avgCost * holding.shares;
       return {
-        name: holding.name,
-        ticker: holding.ticker,
+        name:       holding.name,
+        ticker:     holding.ticker,
         value,
         percentage: totalValue > 0 ? (value / totalValue) * 100 : 0,
-        color: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length],
+        color:      ALLOCATION_COLORS[index % ALLOCATION_COLORS.length],
       };
     })
     .sort((a, b) => b.value - a.value);
@@ -174,15 +226,36 @@ export default function PortfolioPage() {
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">{portfolio.name}</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            {holdings.length} {holdings.length === 1 ? 'holding' : 'holdings'} · {portfolio.currency}
-          </p>
+        <div className="flex items-center gap-4">
+          {/* Portfolio logo */}
+          <div
+            className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-border cursor-pointer hover:opacity-80 transition-opacity"
+            title="Click to edit portfolio"
+            onClick={openEditPortfolio}
+          >
+            {portfolio.image ? (
+              <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-primary/15 flex items-center justify-center">
+                <span className="text-lg font-bold text-primary">
+                  {portfolio.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">{portfolio.name}</h1>
+            <p className="text-text-secondary text-sm mt-1">
+              {holdings.length} {holdings.length === 1 ? 'holding' : 'holdings'} · {portfolio.currency}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={openEditPortfolio} title="Edit portfolio">
+            <Pencil className="w-4 h-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
             <Upload className="w-4 h-4" />
@@ -280,6 +353,84 @@ export default function PortfolioPage() {
         portfolioId={portfolioId}
         onSuccess={handleHoldingSuccess}
       />
+
+      {/* Edit Portfolio Modal */}
+      <Modal
+        isOpen={editPortfolioOpen}
+        onClose={() => setEditPortfolioOpen(false)}
+        title="Edit Portfolio"
+        size="sm"
+      >
+        <form onSubmit={handleEditPortfolioSubmit} className="space-y-4">
+          <Input
+            label="Portfolio name"
+            type="text"
+            value={editPortfolioName}
+            onChange={(e) => setEditPortfolioName(e.target.value)}
+            required
+            autoFocus
+          />
+
+          {/* Logo / image */}
+          <div>
+            <label className="text-sm font-medium text-text-secondary block mb-1.5">
+              Logo / Image <span className="text-text-muted font-normal">(optional)</span>
+            </label>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 cursor-pointer hover:border-primary/50 transition-colors overflow-hidden bg-surface-2"
+                onClick={() => editImageRef.current?.click()}
+              >
+                {editPortfolioImage ? (
+                  <img src={editPortfolioImage} alt="logo" className="w-full h-full object-cover" />
+                ) : (
+                  <ImagePlus className="w-5 h-5 text-text-muted" />
+                )}
+              </div>
+              <div className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => editImageRef.current?.click()}
+                  className="text-xs text-primary hover:underline font-medium block"
+                >
+                  Upload logo or exchange icon
+                </button>
+                <p className="text-xs text-text-muted mt-0.5">JPG, PNG · max 5 MB</p>
+                {editPortfolioImage && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditPortfolioImage(''); if (editImageRef.current) editImageRef.current.value = ''; }}
+                    className="text-xs text-loss hover:underline font-medium mt-1 flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            <input
+              ref={editImageRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleEditPortfolioImageChange}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditPortfolioOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={editPortfolioLoading} className="flex-1">
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

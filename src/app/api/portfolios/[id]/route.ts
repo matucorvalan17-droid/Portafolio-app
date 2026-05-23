@@ -48,7 +48,7 @@ export async function PUT(
     const existing = await getPortfolioForUser(id, session.user.id);
     if (!existing) return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
 
-    const { name, currency, description } = await req.json();
+    const { name, currency, description, image } = await req.json();
 
     const updated = await db.portfolio.update({
       where: { id },
@@ -56,6 +56,7 @@ export async function PUT(
         ...(name        && { name: name.trim() }),
         ...(currency    && { currency }),
         ...(description !== undefined && { description: description?.trim() || null }),
+        ...(image       !== undefined && { image: image || null }),
       },
       include: { holdings: true },
     });

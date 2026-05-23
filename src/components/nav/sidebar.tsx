@@ -127,7 +127,17 @@ export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortf
                       : 'text-text-muted hover:text-text-primary hover:bg-surface-2'
                   )}
                 >
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                  <div className="w-4 h-4 rounded flex-shrink-0 overflow-hidden">
+                    {portfolio.image ? (
+                      <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-primary leading-none">
+                          {portfolio.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <span className="truncate">{portfolio.name}</span>
                 </Link>
               ))}

@@ -47,7 +47,7 @@ export async function PUT(
     const existing = await getHoldingForUser(id, session.user.id);
     if (!existing) return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
 
-    const { ticker, name, shares, avgCost, broker, assetType, currency, notes } = await req.json();
+    const { ticker, name, shares, avgCost, purchaseDate, broker, assetType, currency, notes } = await req.json();
 
     const updated = await db.holding.update({
       where: { id },
@@ -56,6 +56,7 @@ export async function PUT(
         ...(name     && { name: name.trim() }),
         ...(shares   !== undefined && { shares: parseFloat(shares) }),
         ...(avgCost  !== undefined && { avgCost: parseFloat(avgCost) }),
+        purchaseDate: purchaseDate !== undefined ? (purchaseDate ? new Date(purchaseDate) : null) : undefined,
         broker:    broker?.trim() || null,
         ...(assetType  && { assetType }),
         ...(currency   && { currency }),

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, currency = 'USD' } = body;
+    const { name, currency = 'USD', image } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Portfolio name is required' }, { status: 400 });
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         currency,
+        image: image || null,
         userId: session.user.id,
       },
       include: {

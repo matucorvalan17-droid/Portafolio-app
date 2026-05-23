@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, Zap } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,26 +17,31 @@ interface AddAssetModalProps {
 }
 
 const ASSET_TYPES = [
-  { value: 'stock', label: 'Stock' },
-  { value: 'etf', label: 'ETF' },
+  { value: 'stock',  label: 'Stock'  },
+  { value: 'etf',    label: 'ETF'    },
   { value: 'crypto', label: 'Crypto' },
-  { value: 'fund', label: 'Fund' },
+  { value: 'fund',   label: 'Fund'   },
 ];
 
+const today = () => new Date().toISOString().split('T')[0];
+
 export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAssetModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchQuery,    setSearchQuery]    = useState('');
+  const [searchResults,  setSearchResults]  = useState<SearchResult[]>([]);
+  const [searchLoading,  setSearchLoading]  = useState(false);
   const [selectedTicker, setSelectedTicker] = useState('');
-  const [selectedName, setSelectedName] = useState('');
-  const [assetType, setAssetType] = useState('stock');
-  const [shares, setShares] = useState('');
-  const [avgCost, setAvgCost] = useState('');
-  const [broker, setBroker] = useState('');
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedName,   setSelectedName]   = useState('');
+  const [assetType,      setAssetType]      = useState('stock');
+  const [purchaseDate,   setPurchaseDate]   = useState(today);
+  const [shares,         setShares]         = useState('');
+  const [avgCost,        setAvgCost]        = useState('');
+  const [priceLoading,   setPriceLoading]   = useState(false);
+  const [priceAutoFilled,setPriceAutoFilled]= useState(false);
+  const [broker,         setBroker]         = useState('');
+  const [notes,          setNotes]          = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState('');
+  const [showDropdown,   setShowDropdown]   = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const searchTickers = useCallback(
@@ -77,13 +82,32 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectTicker = (result: SearchResult) => {
+  const handleSelectTicker = async (result: SearchResult) => {
     setSelectedTicker(result.symbol);
     setSelectedName(result.name);
     setSearchQuery(result.symbol);
     setAssetType(result.type || 'stock');
     setShowDropdown(false);
     setSearchResults([]);
+
+    // Auto-fetch current price
+    setPriceLoading(true);
+    setPriceAutoFilled(false);
+    try {
+      const res = await fetch(`/api/prices?tickers=${encodeURIComponent(result.symbol)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const price = data[result.symbol]?.price;
+        if (price && price > 0) {
+          setAvgCost(price.toFixed(2));
+          setPriceAutoFilled(true);
+        }
+      }
+    } catch {
+      // ignore — user can enter manually
+    } finally {
+      setPriceLoading(false);
+    }
   };
 
   const handleClearTicker = () => {
@@ -91,6 +115,8 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
     setSelectedName('');
     setSearchQuery('');
     setSearchResults([]);
+    setAvgCost('');
+    setPriceAutoFilled(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,13 +129,12 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
     }
 
     const ticker = selectedTicker || searchQuery.toUpperCase().trim();
-    const name = selectedName || ticker;
+    const name   = selectedName   || ticker;
 
     if (!shares || parseFloat(shares) <= 0) {
       setError('Please enter a valid number of shares');
       return;
     }
-
     if (!avgCost || parseFloat(avgCost) < 0) {
       setError('Please enter a valid average cost');
       return;
@@ -124,11 +149,12 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
           portfolioId,
           ticker,
           name,
-          shares: parseFloat(shares),
-          avgCost: parseFloat(avgCost),
-          broker: broker || undefined,
+          shares:       parseFloat(shares),
+          avgCost:      parseFloat(avgCost),
+          purchaseDate: purchaseDate || undefined,
+          broker:       broker || undefined,
           assetType,
-          notes: notes || undefined,
+          notes:        notes || undefined,
         }),
       });
 
@@ -152,8 +178,10 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
     setSelectedTicker('');
     setSelectedName('');
     setAssetType('stock');
+    setPurchaseDate(today);
     setShares('');
     setAvgCost('');
+    setPriceAutoFilled(false);
     setBroker('');
     setNotes('');
     setError('');
@@ -186,6 +214,7 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
                 if (selectedTicker) {
                   setSelectedTicker('');
                   setSelectedName('');
+                  setPriceAutoFilled(false);
                 }
               }}
               onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
@@ -264,6 +293,20 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
           </div>
         </div>
 
+        {/* Purchase date */}
+        <div>
+          <label className="text-sm font-medium text-text-secondary block mb-1.5">
+            Purchase Date
+          </label>
+          <input
+            type="date"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
+            max={today()}
+            className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
+        </div>
+
         {/* Shares and avg cost */}
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -276,16 +319,32 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
             min="0"
             required
           />
-          <Input
-            label="Avg Cost / Unit"
-            type="number"
-            placeholder="150.00"
-            value={avgCost}
-            onChange={(e) => setAvgCost(e.target.value)}
-            step="any"
-            min="0"
-            required
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-text-secondary">Avg Cost / Unit</label>
+              {priceLoading && (
+                <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              )}
+              {priceAutoFilled && !priceLoading && (
+                <span className="flex items-center gap-1 text-xs text-primary font-medium">
+                  <Zap className="w-3 h-3" />
+                  Live price
+                </span>
+              )}
+            </div>
+            <input
+              type="number"
+              placeholder="150.00"
+              value={avgCost}
+              onChange={(e) => { setAvgCost(e.target.value); setPriceAutoFilled(false); }}
+              step="any"
+              min="0"
+              required
+              className={`w-full bg-surface border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                priceAutoFilled ? 'border-primary/40 bg-primary/5' : 'border-border'
+              }`}
+            />
+          </div>
         </div>
 
         {/* Broker */}
@@ -309,9 +368,7 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
           />
         </div>
 
-        {error && (
-          <p className="text-loss text-sm">{error}</p>
-        )}
+        {error && <p className="text-loss text-sm">{error}</p>}
 
         {/* Preview */}
         {shares && avgCost && (

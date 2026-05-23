@@ -8,6 +8,7 @@ export interface Portfolio {
   id: string;
   name: string;
   description?: string;
+  image?: string | null;
   userId: string;
   currency: string;
   createdAt: string;
@@ -22,6 +23,7 @@ export interface Holding {
   name: string;
   shares: number;
   avgCost: number;
+  purchaseDate?: string | null;
   broker?: string | null;
   assetType: AssetType;
   currency: string;

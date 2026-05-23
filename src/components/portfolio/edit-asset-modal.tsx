@@ -14,28 +14,35 @@ interface EditAssetModalProps {
 }
 
 const ASSET_TYPES = [
-  { value: 'stock', label: 'Stock' },
-  { value: 'etf', label: 'ETF' },
+  { value: 'stock',  label: 'Stock'  },
+  { value: 'etf',    label: 'ETF'    },
   { value: 'crypto', label: 'Crypto' },
-  { value: 'fund', label: 'Fund' },
+  { value: 'fund',   label: 'Fund'   },
 ];
 
+const toDateInput = (iso: string | null | undefined) =>
+  iso ? iso.split('T')[0] : '';
+
+const today = () => new Date().toISOString().split('T')[0];
+
 export function EditAssetModal({ isOpen, onClose, holding, onSuccess }: EditAssetModalProps) {
-  const [ticker, setTicker] = useState('');
-  const [name, setName] = useState('');
-  const [assetType, setAssetType] = useState('stock');
-  const [shares, setShares] = useState('');
-  const [avgCost, setAvgCost] = useState('');
-  const [broker, setBroker] = useState('');
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [ticker,       setTicker]       = useState('');
+  const [name,         setName]         = useState('');
+  const [assetType,    setAssetType]    = useState('stock');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [shares,       setShares]       = useState('');
+  const [avgCost,      setAvgCost]      = useState('');
+  const [broker,       setBroker]       = useState('');
+  const [notes,        setNotes]        = useState('');
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
 
   useEffect(() => {
     if (holding) {
       setTicker(holding.ticker);
       setName(holding.name);
       setAssetType(holding.assetType);
+      setPurchaseDate(toDateInput(holding.purchaseDate));
       setShares(String(holding.shares));
       setAvgCost(String(holding.avgCost));
       setBroker(holding.broker || '');
@@ -63,13 +70,14 @@ export function EditAssetModal({ isOpen, onClose, holding, onSuccess }: EditAsse
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ticker: ticker.trim(),
-          name: name.trim(),
-          shares: parseFloat(shares),
-          avgCost: parseFloat(avgCost),
-          broker: broker || undefined,
+          ticker:       ticker.trim(),
+          name:         name.trim(),
+          shares:       parseFloat(shares),
+          avgCost:      parseFloat(avgCost),
+          purchaseDate: purchaseDate || null,
+          broker:       broker || undefined,
           assetType,
-          notes: notes || undefined,
+          notes:        notes || undefined,
         }),
       });
 
@@ -129,6 +137,20 @@ export function EditAssetModal({ isOpen, onClose, holding, onSuccess }: EditAsse
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Purchase date */}
+        <div>
+          <label className="text-sm font-medium text-text-secondary block mb-1.5">
+            Purchase Date
+          </label>
+          <input
+            type="date"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
+            max={today()}
+            className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
