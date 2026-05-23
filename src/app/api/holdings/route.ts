@@ -64,20 +64,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
     }
 
-    const holding = await db.holding.create({
-      data: {
-        portfolioId,
-        ticker: ticker.toUpperCase().trim(),
-        name: name.trim(),
-        shares: parseFloat(shares),
-        avgCost: parseFloat(avgCost),
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        broker: broker?.trim() || null,
-        assetType: assetType || 'stock',
-        currency: currency || portfolio.currency || 'USD',
-        notes: notes?.trim() || null,
-      },
+    const normalizedTicker = ticker.toUpperCase().trim();
+    const newShares  = parseFloat(shares);
+    const newAvgCost = parseFloat(avgCost);
+
+    // Merge with existing holding of same ticker (weighted avg cost)
+    const existing = await db.holding.findFirst({
+      where: { portfolioId, ticker: normalizedTicker },
     });
+
+    let holding;
+    if (existing) {
+      const totalShares  = existing.shares + newShares;
+      const weightedCost = (existing.shares * existing.avgCost + newShares * newAvgCost) / totalShares;
+      holding = await db.holding.update({
+        where: { id: existing.id },
+        data: {
+          shares:  totalShares,
+          avgCost: weightedCost,
+          // Update name/broker/notes if provided
+          ...(name        && { name: name.trim() }),
+          ...(broker      && { broker: broker.trim() }),
+          ...(notes       && { notes: notes.trim() }),
+          ...(assetType   && { assetType }),
+          purchaseDate: purchaseDate ? new Date(purchaseDate) : existing.purchaseDate,
+        },
+      });
+    } else {
+      holding = await db.holding.create({
+        data: {
+          portfolioId,
+          ticker: normalizedTicker,
+          name: name.trim(),
+          shares:  newShares,
+          avgCost: newAvgCost,
+          purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
+          broker: broker?.trim() || null,
+          assetType: assetType || 'stock',
+          currency: currency || portfolio.currency || 'USD',
+          notes: notes?.trim() || null,
+        },
+      });
+    }
 
     return NextResponse.json(holding, { status: 201 });
   } catch (error) {
