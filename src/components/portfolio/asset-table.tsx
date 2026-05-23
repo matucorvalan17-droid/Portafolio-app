@@ -91,18 +91,14 @@ export function AssetTable({ holdings, quotes, loading, onEdit, onDelete }: Asse
             return (
               <tr
                 key={holding.id}
-                className={`border-b border-border/40 transition-colors hover:bg-surface-2/40 group relative`}
+                className="border-b border-border/40 transition-colors hover:bg-surface-2/40 group relative"
               >
-                {/* Colored left indicator */}
-                <td className="px-4 py-0 w-0 p-0">
-                  <div className={`absolute left-0 top-0 bottom-0 w-0.5 transition-opacity ${
-                    !hasPrice ? 'opacity-0' :
-                    isPositive ? 'bg-gain opacity-60' : 'bg-loss opacity-60'
+                {/* Asset — left indicator lives here, absolute within the tr */}
+                <td className="pl-5 pr-4 py-3.5 relative">
+                  {/* Left-edge performance bar */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-0.5 rounded-r transition-opacity ${
+                    !hasPrice ? 'opacity-0' : isPositive ? 'bg-gain opacity-70' : 'bg-loss opacity-70'
                   }`} />
-                </td>
-
-                {/* Asset */}
-                <td className="pl-5 pr-4 py-3.5">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-text-primary text-sm tracking-wide">{holding.ticker}</p>

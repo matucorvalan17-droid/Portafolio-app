@@ -240,7 +240,6 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
               <Badge variant={assetType as 'stock' | 'crypto' | 'etf' | 'fund'}>
                 {selectedTicker}
               </Badge>
-              <span className="text-xs text-text-secondary">{selectedName}</span>
             </div>
           )}
 
@@ -292,6 +291,15 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
             ))}
           </div>
         </div>
+
+        {/* Asset name */}
+        <Input
+          label="Asset Name"
+          type="text"
+          placeholder="e.g. SPDR S&P 500 ETF Trust"
+          value={selectedName}
+          onChange={(e) => setSelectedName(e.target.value)}
+        />
 
         {/* Purchase date */}
         <div>
