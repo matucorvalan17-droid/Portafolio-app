@@ -92,8 +92,8 @@ export function StatsOverview({
         value={String(portfolioCount)}
         subtitle={`${holdingsCount} total holdings`}
         icon={Briefcase}
-        iconBg="bg-purple-500/10"
-        iconColor="text-purple-400"
+        iconBg="bg-primary/10"
+        iconColor="text-[#ce93d8]"
         delay={0.1}
       />
       <StatCard

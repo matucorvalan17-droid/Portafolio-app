@@ -1,8 +1,3 @@
-// WealthTrack — Tailwind CSS Configuration
-// This file controls all the custom colors, fonts, and animations.
-// Edit the colors here to change the whole app's color scheme.
-// Learn more: https://tailwindcss.com/docs/configuration
-
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
@@ -13,44 +8,44 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // ── COLORS ─────────────────────────────────────────────────
-      // Edit these hex values to change the app's color scheme
       colors: {
-        background:      '#050508',   // main page background
-        surface:         '#0d0d14',   // card/panel backgrounds
-        'surface-2':     '#13131e',   // slightly lighter surface
-        border:          '#1e1e2e',   // border color
-        'border-2':      '#2a2a3e',   // lighter border
-        primary:         '#6366f1',   // indigo — main brand color
-        'primary-hover': '#5557d4',   // darker for hover states
-        gain:            '#22c55e',   // green — for profits/gains
-        loss:            '#ef4444',   // red — for losses
-        warning:         '#f59e0b',   // amber — for warnings
-        'text-primary':  '#f8f8fc',   // main text
-        'text-secondary':'#8888a8',   // secondary/muted text
-        'text-muted':    '#5c5c78',   // very muted text
+        // ── Backgrounds ───────────────────────────────────────────
+        background:      '#050505',   // pure near-black
+        surface:         '#0c0c0c',   // card / panel
+        'surface-2':     '#131313',   // slightly elevated surface
+        // ── Borders ───────────────────────────────────────────────
+        border:          '#1e1e1e',
+        'border-2':      '#2a2a2a',
+        // ── Brand (electric green) ────────────────────────────────
+        primary:         '#00e676',   // electric green — CTAs, links, focus
+        'primary-hover': '#00c85a',   // darker on hover
+        // ── Semantic ──────────────────────────────────────────────
+        gain:            '#00e676',   // profits — same green family as brand
+        loss:            '#ff3b30',   // losses — vivid iOS red
+        warning:         '#ffb300',   // amber warnings
+        // ── Text ──────────────────────────────────────────────────
+        'text-primary':   '#f0f0f0',
+        'text-secondary': '#888888',
+        'text-muted':     '#505050',
       },
 
-      // ── FONTS ───────────────────────────────────────────────────
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
 
-      // ── BACKGROUNDS ────────────────────────────────────────────
       backgroundImage: {
-        'gradient-radial':   'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary':  'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-        'gradient-gain':     'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-        'gradient-loss':     'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+        'gradient-radial':  'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-primary': 'linear-gradient(135deg, #00e676 0%, #00bfa5 100%)',
+        'gradient-gain':    'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
+        'gradient-loss':    'linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%)',
       },
 
-      // ── ANIMATIONS ─────────────────────────────────────────────
       animation: {
-        'pulse-slow':  'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in':     'fadeIn 0.5s ease-out',
-        'slide-up':    'slideUp 0.4s ease-out',
-        'float':       'float 6s ease-in-out infinite',
-        'spin-slow':   'spin 3s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in':    'fadeIn 0.5s ease-out',
+        'slide-up':   'slideUp 0.4s ease-out',
+        'float':      'float 6s ease-in-out infinite',
+        'spin-slow':  'spin 3s linear infinite',
       },
       keyframes: {
         fadeIn:  { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
@@ -58,13 +53,12 @@ const config: Config = {
         float:   { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
       },
 
-      // ── SHADOWS ─────────────────────────────────────────────────
       boxShadow: {
-        'glow-primary': '0 0 30px rgba(99, 102, 241, 0.3)',
-        'glow-gain':    '0 0 20px rgba(34, 197, 94, 0.2)',
-        'glow-loss':    '0 0 20px rgba(239, 68, 68, 0.2)',
-        'card':         '0 4px 24px rgba(0, 0, 0, 0.4)',
-        'card-hover':   '0 8px 32px rgba(0, 0, 0, 0.5)',
+        'glow-primary': '0 0 32px rgba(0, 230, 118, 0.28)',
+        'glow-gain':    '0 0 20px rgba(0, 230, 118, 0.18)',
+        'glow-loss':    '0 0 20px rgba(255, 59,  48,  0.18)',
+        'card':         '0 4px 24px rgba(0, 0, 0, 0.6)',
+        'card-hover':   '0 8px 40px rgba(0, 0, 0, 0.7)',
       },
 
       backdropBlur: { xs: '2px' },

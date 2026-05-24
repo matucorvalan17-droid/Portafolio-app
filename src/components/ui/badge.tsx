@@ -10,7 +10,7 @@ const variantStyles = {
   stock: 'bg-primary/10 text-primary border-primary/20',
   crypto: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
   etf: 'bg-gain/10 text-gain border-gain/20',
-  fund: 'bg-purple-400/10 text-purple-400 border-purple-400/20',
+  fund: 'bg-[#64b5f6]/10 text-[#64b5f6] border-[#64b5f6]/20',
   gain: 'bg-gain/10 text-gain border-gain/20',
   loss: 'bg-loss/10 text-loss border-loss/20',
   default: 'bg-surface-2 text-text-secondary border-border',

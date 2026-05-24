@@ -1,105 +1,95 @@
-/* WealthTrack — Global Styles
-   You can edit colors and fonts here.
-   The CSS variables at the top control the whole app's color scheme. */
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── COLOR VARIABLES ──────────────────────────────────────────── */
-/* Edit these to change the entire app's look */
+/* ─── COLOR TOKENS ─────────────────────────────────────────────── */
 :root {
-  --background: #050508;
-  --surface: #0d0d14;
-  --surface-2: #13131e;
-  --border: #1e1e2e;
-  --primary: #6366f1;
+  --background: #050505;
+  --surface:    #0c0c0c;
+  --surface-2:  #131313;
+  --border:     #1e1e1e;
+  --primary:    #00e676;
 }
 
 /* ─── RESET ────────────────────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--background);
-  color: #f8f8fc;
+  color: #f0f0f0;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── SCROLLBAR ────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2a2a3e; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #363636; }
 
 /* ─── GLASS CARD ───────────────────────────────────────────────── */
-/* The frosted-glass effect used on cards */
 .glass-card {
-  background: rgba(13, 13, 20, 0.8);
+  background: rgba(12, 12, 12, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(30, 30, 46, 0.8);
+  border: 1px solid rgba(30, 30, 30, 0.9);
 }
 
 /* ─── GRADIENT TEXT ────────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  background: linear-gradient(135deg, #00e676 0%, #00bfa5 60%, #69f0ae 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ─── GLOW EFFECTS ─────────────────────────────────────────────── */
-.glow-primary { box-shadow: 0 0 30px rgba(99, 102, 241, 0.3); }
-.glow-gain    { box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);  }
-.glow-loss    { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);  }
+.glow-primary { box-shadow: 0 0 32px rgba(0, 230, 118, 0.25); }
+.glow-gain    { box-shadow: 0 0 20px rgba(0, 230, 118, 0.15); }
+.glow-loss    { box-shadow: 0 0 20px rgba(255, 59, 48,  0.15); }
+
+/* ─── GRID BACKGROUND ──────────────────────────────────────────── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 230, 118, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 230, 118, 0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
 
 /* ─── ANIMATIONS ───────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
-
 .shimmer {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
 @keyframes pulse-ring {
-  0%   { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(99, 102, 241, 0.5); }
-  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);   }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(99, 102, 241, 0);   }
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(0, 230, 118, 0.5); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(0, 230, 118, 0);  }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(0, 230, 118, 0);  }
 }
-
 .pulse-ring { animation: pulse-ring 2s infinite; }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px);   }
   50%       { transform: translateY(-10px); }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
-
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0);    }
 }
-
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1);    }
@@ -110,25 +100,16 @@ body {
 .animate-scale-in    { animation: scaleIn      0.3s ease-out; }
 .animate-float       { animation: float        6s ease-in-out infinite; }
 
-/* ─── GRID BACKGROUND (landing page) ──────────────────────────── */
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
-}
-
 /* ─── NUMBER FONT ──────────────────────────────────────────────── */
-/* Makes numbers line up neatly in tables */
 .font-mono-num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* ─── SELECT STYLING ───────────────────────────────────────────── */
+/* ─── SELECT ───────────────────────────────────────────────────── */
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238888a8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555555' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 30px;
@@ -136,9 +117,9 @@ select {
 
 /* ─── FOCUS RING ───────────────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline: 2px solid rgba(0, 230, 118, 0.55);
   outline-offset: 2px;
 }
 
-/* ─── TABLE ROW HOVER ──────────────────────────────────────────── */
-.table-row-hover:hover { background-color: rgba(99, 102, 241, 0.04); }
+/* ─── TABLE HOVER ──────────────────────────────────────────────── */
+.table-row-hover:hover { background-color: rgba(0, 230, 118, 0.03); }
