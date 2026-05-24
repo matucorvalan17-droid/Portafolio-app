@@ -6,7 +6,7 @@ import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft, P
 import Link from 'next/link';
 import { AssetTable } from '@/components/portfolio/asset-table';
 import { TransactionHistory } from '@/components/portfolio/transaction-history';
-import { AddAssetModal } from '@/components/portfolio/add-asset-modal';
+import { AddTransactionModal } from '@/components/portfolio/add-transaction-modal';
 import { EditAssetModal } from '@/components/portfolio/edit-asset-modal';
 import { ImportCSVModal } from '@/components/portfolio/import-csv-modal';
 import { AllocationChart } from '@/components/charts/allocation-chart';
@@ -358,7 +358,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Modals */}
-      <AddAssetModal
+      <AddTransactionModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         portfolioId={portfolioId}

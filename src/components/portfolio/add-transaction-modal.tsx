@@ -263,10 +263,6 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
           )}
         </div>
 
-        {/* Name */}
-        <Input label="Nombre del activo" type="text" placeholder="e.g. S&P 500 ETF"
-          value={selectedName} onChange={(e) => setSelectedName(e.target.value)} />
-
         {/* Asset type — only relevant for buys (creates holding) */}
         {txType === 'buy' && (
           <div>
@@ -353,8 +349,8 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
 
         {/* Fee */}
         {txType !== 'dividend' && (
-          <Input label="Comisión / Fee (opcional)" type="number" placeholder="0.00"
-            value={fee} onChange={(e) => setFee(e.target.value)} step="any" min="0" />
+          <Input label="Comisión / Fee (opcional)" type="text" inputMode="decimal" placeholder="0.00"
+            value={fee} onChange={(e) => setFee(e.target.value)} />
         )}
 
         {/* Broker */}
