@@ -26,9 +26,9 @@ export async function reconcileHolding(
 
   for (const tx of txs) {
     if (tx.type === 'buy') {
-      // Use the stored total (actual amount invested) + fee, NOT shares × price.
-      // This preserves precision when the broker rounds fractional shares.
-      totalCost += tx.total + tx.fee;
+      // Use the stored total (actual amount invested in the asset), NOT shares × price.
+      // Fee is a broker cost and is NOT included in the asset's cost basis.
+      totalCost += tx.total;
       shares    += tx.shares;
     } else if (tx.type === 'sell') {
       if (shares > 0) {

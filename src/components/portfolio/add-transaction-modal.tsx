@@ -389,9 +389,9 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
                 ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            {txShares > 0 && total > 0 && (
+            {txShares > 0 && baseAmount > 0 && (
               <p className="text-xs text-text-muted text-right">
-                Costo promedio: ${((total) / txShares).toFixed(4)}/acción
+                Costo promedio: ${(baseAmount / txShares).toFixed(4)}/acción
               </p>
             )}
           </div>
