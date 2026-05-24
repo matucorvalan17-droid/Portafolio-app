@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, DollarSign, Plus } from 'lucide-react';
 import { Spinner } from '@/components/ui/loading';
+import { Button } from '@/components/ui/button';
 import { formatCurrency, formatShares } from '@/lib/utils';
+import { AddTransactionModal } from '@/components/portfolio/add-transaction-modal';
 
 interface Transaction {
   id: string;
@@ -21,6 +23,7 @@ interface Transaction {
 
 interface TransactionHistoryProps {
   portfolioId: string;
+  onHoldingsChanged?: () => void;
 }
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -35,10 +38,11 @@ function formatDate(iso: string) {
   });
 }
 
-export function TransactionHistory({ portfolioId }: TransactionHistoryProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [deletingId,   setDeletingId]   = useState<string | null>(null);
+export function TransactionHistory({ portfolioId, onHoldingsChanged }: TransactionHistoryProps) {
+  const [transactions,  setTransactions]  = useState<Transaction[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
+  const [addModalOpen,  setAddModalOpen]  = useState(false);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -53,14 +57,20 @@ export function TransactionHistory({ portfolioId }: TransactionHistoryProps) {
   useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
   const handleDelete = async (tx: Transaction) => {
-    if (!confirm(`¿Eliminar esta transacción de ${tx.ticker}?`)) return;
+    if (!confirm(`¿Eliminar esta transacción de ${tx.ticker}? Esto actualizará el holding automáticamente.`)) return;
     setDeletingId(tx.id);
     try {
       await fetch(`/api/transactions/${tx.id}`, { method: 'DELETE' });
       setTransactions((prev) => prev.filter((t) => t.id !== tx.id));
+      onHoldingsChanged?.();
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleTransactionAdded = () => {
+    fetchTransactions();
+    onHoldingsChanged?.();
   };
 
   if (loading) {
@@ -73,18 +83,36 @@ export function TransactionHistory({ portfolioId }: TransactionHistoryProps) {
 
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <DollarSign className="w-8 h-8 text-text-muted" />
+      <>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <DollarSign className="w-8 h-8 text-text-muted" />
+          </div>
+          <h3 className="text-text-primary font-semibold mb-2">Sin transacciones</h3>
+          <p className="text-text-muted text-sm mb-4">Registrá tu primera operación</p>
+          <Button size="sm" onClick={() => setAddModalOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Nueva Operación
+          </Button>
         </div>
-        <h3 className="text-text-primary font-semibold mb-2">Sin transacciones</h3>
-        <p className="text-text-muted text-sm">Las transacciones aparecerán aquí cuando agregues activos</p>
-      </div>
+        <AddTransactionModal
+          isOpen={addModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          portfolioId={portfolioId}
+          onSuccess={handleTransactionAdded}
+        />
+      </>
     );
   }
 
   return (
+    <>
     <div className="overflow-x-auto">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+        <span className="text-xs text-text-muted">{transactions.length} operación{transactions.length !== 1 ? 'es' : ''}</span>
+        <Button size="sm" variant="ghost" onClick={() => setAddModalOpen(true)}>
+          <Plus className="w-3.5 h-3.5" /> Nueva Operación
+        </Button>
+      </div>
       <table className="w-full">
         <thead>
           <tr className="border-b border-border">
@@ -171,5 +199,12 @@ export function TransactionHistory({ portfolioId }: TransactionHistoryProps) {
         </tbody>
       </table>
     </div>
+    <AddTransactionModal
+      isOpen={addModalOpen}
+      onClose={() => setAddModalOpen(false)}
+      portfolioId={portfolioId}
+      onSuccess={handleTransactionAdded}
+    />
+    </>
   );
 }

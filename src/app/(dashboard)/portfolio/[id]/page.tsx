@@ -353,7 +353,7 @@ export default function PortfolioPage() {
             onDelete={handleDeleteHolding}
           />
         ) : (
-          <TransactionHistory portfolioId={portfolioId} />
+          <TransactionHistory portfolioId={portfolioId} onHoldingsChanged={handleHoldingSuccess} />
         )}
       </div>
 
