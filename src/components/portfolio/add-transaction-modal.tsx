@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { debounce } from '@/lib/utils';
-import type { SearchResult } from '@/types';
+import type { SearchResult, Portfolio } from '@/types';
 
 interface AddTransactionModalProps {
-  isOpen:      boolean;
-  onClose:     () => void;
-  portfolioId: string;
-  onSuccess:   () => void;
+  isOpen:       boolean;
+  onClose:      () => void;
+  portfolioId?: string;          // optional — if omitted, a selector is shown
+  portfolios?:  Portfolio[];     // list to pick from when portfolioId not set
+  onSuccess:    () => void;
 }
 
 const TYPES = [
@@ -31,7 +32,8 @@ const ASSET_TYPES = [
 
 const today = () => new Date().toISOString().split('T')[0];
 
-export function AddTransactionModal({ isOpen, onClose, portfolioId, onSuccess }: AddTransactionModalProps) {
+export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfolioId, portfolios, onSuccess }: AddTransactionModalProps) {
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState(fixedPortfolioId ?? '');
   const [txType,         setTxType]         = useState('buy');
   const [searchQuery,    setSearchQuery]     = useState('');
   const [searchResults,  setSearchResults]   = useState<SearchResult[]>([]);
@@ -98,6 +100,7 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId, onSuccess }:
   };
 
   const reset = () => {
+    setSelectedPortfolioId(fixedPortfolioId ?? '');
     setTxType('buy'); setSearchQuery(''); setSelectedTicker(''); setSelectedName('');
     setAssetType('stock'); setDate(today); setShares(''); setPrice('');
     setPriceAutoFilled(false); setFee(''); setBroker(''); setNotes(''); setError('');
@@ -109,6 +112,8 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId, onSuccess }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const portfolioId = fixedPortfolioId || selectedPortfolioId;
+    if (!portfolioId) { setError('Seleccioná un portfolio'); return; }
     const ticker = selectedTicker || searchQuery.toUpperCase().trim();
     if (!ticker) { setError('Seleccioná un ticker'); return; }
     if (!shares || parseFloat(shares) <= 0) { setError('Ingresá una cantidad válida'); return; }
@@ -124,7 +129,7 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId, onSuccess }:
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          portfolioId,
+          portfolioId: fixedPortfolioId || selectedPortfolioId,
           ticker,
           name:      selectedName || ticker,
           type:      txType,
@@ -162,6 +167,24 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId, onSuccess }:
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Registrar Operación" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Portfolio selector — only shown when not pre-set */}
+        {!fixedPortfolioId && portfolios && portfolios.length > 0 && (
+          <div>
+            <label className="text-sm font-medium text-text-secondary block mb-1.5">Portfolio</label>
+            <select
+              value={selectedPortfolioId}
+              onChange={(e) => setSelectedPortfolioId(e.target.value)}
+              required
+              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="">Seleccioná un portfolio…</option>
+              {portfolios.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Transaction type */}
         <div className="flex gap-2">

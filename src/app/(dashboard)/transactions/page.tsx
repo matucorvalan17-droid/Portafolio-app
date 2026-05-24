@@ -1,44 +1,181 @@
 'use client';
-// WealthTrack — Transactions Page
-// Shows all buy, sell, and dividend records.
-// You can add transactions manually or they log automatically when you trade.
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Filter, Download, History, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, ChevronRight, TrendingUp, TrendingDown, DollarSign, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { Input } from '@/components/ui/input';
-import { SkeletonCard } from '@/components/ui/loading';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import { toast } from 'sonner';
+import { Spinner } from '@/components/ui/loading';
+import { AddTransactionModal } from '@/components/portfolio/add-transaction-modal';
+import { formatCurrency, formatShares } from '@/lib/utils';
 import type { Transaction, Portfolio } from '@/types';
 
-const TYPE_COLORS = {
-  buy:      { bg: 'bg-gain/10',    text: 'text-gain',    icon: TrendingUp,   label: 'Buy'      },
-  sell:     { bg: 'bg-loss/10',    text: 'text-loss',    icon: TrendingDown, label: 'Sell'     },
-  dividend: { bg: 'bg-warning/10', text: 'text-warning', icon: DollarSign,   label: 'Dividend' },
+const TYPE_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  buy:      { label: 'Compra',    color: 'bg-gain/10 text-gain border-gain/20',         icon: <TrendingUp   className="w-3 h-3" /> },
+  sell:     { label: 'Venta',     color: 'bg-loss/10 text-loss border-loss/20',          icon: <TrendingDown className="w-3 h-3" /> },
+  dividend: { label: 'Dividendo', color: 'bg-primary/10 text-primary border-primary/20', icon: <DollarSign   className="w-3 h-3" /> },
 };
 
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [portfolios, setPortfolios]     = useState<Portfolio[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [filterType, setFilterType]     = useState<string>('all');
-  const [addOpen, setAddOpen]           = useState(false);
-  const [submitting, setSubmitting]     = useState(false);
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
-  const [form, setForm] = useState({
-    portfolioId: '',
-    ticker:      '',
-    name:        '',
-    type:        'buy' as 'buy' | 'sell' | 'dividend',
-    shares:      '',
-    price:       '',
-    fee:         '0',
-    date:        new Date().toISOString().split('T')[0],
-    broker:      '',
-    notes:       '',
-  });
+interface PortfolioGroup {
+  portfolio: Portfolio;
+  transactions: Transaction[];
+  totalBought: number;
+  totalSold: number;
+}
+
+function PortfolioSection({
+  group,
+  expanded,
+  onToggle,
+  onDelete,
+  deletingId,
+}: {
+  group: PortfolioGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  onDelete: (tx: Transaction) => void;
+  deletingId: string | null;
+}) {
+  const { portfolio, transactions, totalBought, totalSold } = group;
+  const net = totalSold - totalBought;
+
+  return (
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      {/* Portfolio header row */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-2/50 transition-colors text-left"
+      >
+        {/* Logo / initial */}
+        <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-border">
+          {portfolio.image ? (
+            <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+              <span className="text-sm font-bold text-primary">
+                {portfolio.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Name + count */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-text-primary">{portfolio.name}</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            {transactions.length} operación{transactions.length !== 1 ? 'es' : ''}
+          </p>
+        </div>
+
+        {/* Summary */}
+        <div className="hidden sm:flex items-center gap-4 mr-2">
+          {totalBought > 0 && (
+            <div className="text-right">
+              <p className="text-xs text-text-muted">Comprado</p>
+              <p className="text-sm font-semibold text-loss font-mono-num">−{formatCurrency(totalBought)}</p>
+            </div>
+          )}
+          {totalSold > 0 && (
+            <div className="text-right">
+              <p className="text-xs text-text-muted">Vendido</p>
+              <p className="text-sm font-semibold text-gain font-mono-num">+{formatCurrency(totalSold)}</p>
+            </div>
+          )}
+          {(totalBought > 0 || totalSold > 0) && (
+            <div className="text-right">
+              <p className="text-xs text-text-muted">Neto</p>
+              <p className={`text-sm font-bold font-mono-num ${net >= 0 ? 'text-gain' : 'text-loss'}`}>
+                {net >= 0 ? '+' : ''}{formatCurrency(net)}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Arrow */}
+        <ChevronRight
+          className={`w-4 h-4 text-text-muted flex-shrink-0 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+
+      {/* Expandable transaction table */}
+      {expanded && (
+        <div className="border-t border-border overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border/60 bg-surface-2/40">
+                <th className="text-left px-5 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Fecha</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Activo</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Tipo</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Acciones</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Precio</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Comisión</th>
+                <th className="text-right px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wider">Total</th>
+                <th className="px-4 py-2.5 w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => {
+                const cfg = TYPE_CONFIG[tx.type] ?? TYPE_CONFIG.buy;
+                return (
+                  <tr key={tx.id} className="border-b border-border/30 last:border-0 hover:bg-surface-2/40 transition-colors group">
+                    <td className="px-5 py-3 text-sm text-text-secondary whitespace-nowrap">{formatDate(tx.date)}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-bold text-text-primary">{tx.ticker}</p>
+                      <p className="text-xs text-text-muted truncate max-w-[140px]">{tx.name}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>
+                        {cfg.icon}{cfg.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono-num text-text-primary">
+                      {formatShares(tx.shares)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono-num text-text-secondary">
+                      {formatCurrency(tx.price)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono-num text-text-muted">
+                      {tx.fee > 0 ? formatCurrency(tx.fee) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`text-sm font-semibold font-mono-num ${tx.type === 'buy' ? 'text-loss' : 'text-gain'}`}>
+                        {tx.type === 'buy' ? '−' : '+'}{formatCurrency(tx.total + (tx.type === 'buy' ? tx.fee : 0))}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => onDelete(tx)}
+                        disabled={deletingId === tx.id}
+                        className="p-1.5 text-text-muted hover:text-loss hover:bg-loss/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                      >
+                        {deletingId === tx.id ? <Spinner size="sm" /> : (
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function TransactionsPage() {
+  const [transactions,  setTransactions]  = useState<Transaction[]>([]);
+  const [portfolios,    setPortfolios]    = useState<Portfolio[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
+  const [addModalOpen,  setAddModalOpen]  = useState(false);
+  const [expanded,      setExpanded]      = useState<Set<string>>(new Set());
+  const [filterType,    setFilterType]    = useState<string>('all');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -47,10 +184,14 @@ export default function TransactionsPage() {
         fetch('/api/transactions'),
         fetch('/api/portfolios'),
       ]);
-      if (txRes.ok) setTransactions(await txRes.json());
-      if (pRes.ok)  setPortfolios(await pRes.json());
-    } catch {
-      toast.error('Failed to load transactions');
+      if (txRes.ok) {
+        const txs: Transaction[] = await txRes.json();
+        setTransactions(txs);
+        // Auto-expand all portfolios that have transactions
+        const ids = new Set(txs.map((t) => t.portfolioId ?? (t.portfolio as { id: string })?.id).filter(Boolean) as string[]);
+        setExpanded(ids);
+      }
+      if (pRes.ok) setPortfolios(await pRes.json());
     } finally {
       setLoading(false);
     }
@@ -58,308 +199,176 @@ export default function TransactionsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.portfolioId || !form.ticker || !form.shares || !form.price) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    setSubmitting(true);
+  const handleDelete = async (tx: Transaction) => {
+    if (!confirm(`¿Eliminar transacción de ${tx.ticker}? Esto actualizará el holding automáticamente.`)) return;
+    setDeletingId(tx.id);
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          shares: parseFloat(form.shares),
-          price:  parseFloat(form.price),
-          fee:    parseFloat(form.fee) || 0,
-          total:  parseFloat(form.shares) * parseFloat(form.price),
-        }),
-      });
-      if (res.ok) {
-        toast.success('Transaction added!');
-        setAddOpen(false);
-        setForm({ portfolioId: '', ticker: '', name: '', type: 'buy', shares: '', price: '', fee: '0', date: new Date().toISOString().split('T')[0], broker: '', notes: '' });
-        loadData();
-      } else {
-        toast.error('Failed to add transaction');
-      }
+      await fetch(`/api/transactions/${tx.id}`, { method: 'DELETE' });
+      setTransactions((prev) => prev.filter((t) => t.id !== tx.id));
     } finally {
-      setSubmitting(false);
+      setDeletingId(null);
     }
+  };
+
+  const togglePortfolio = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
   const handleExport = async () => {
-    try {
-      const res = await fetch('/api/export?type=transactions');
-      if (!res.ok) { toast.error('Export failed'); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `wealthtrack-transactions-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Transactions exported!');
-    } catch { toast.error('Export failed'); }
+    const rows = ['Date,Portfolio,Ticker,Name,Type,Shares,Price,Fee,Total,Broker'];
+    for (const tx of transactions) {
+      const pName = portfolios.find((p) => p.id === tx.portfolioId)?.name ?? '';
+      rows.push([
+        new Date(tx.date).toISOString().split('T')[0],
+        pName, tx.ticker, tx.name, tx.type,
+        tx.shares, tx.price, tx.fee, tx.total,
+        tx.broker ?? '',
+      ].join(','));
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `transacciones-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
   };
 
-  const filtered = filterType === 'all'
-    ? transactions
-    : transactions.filter((t) => t.type === filterType);
+  // Group filtered transactions by portfolio, ordered by portfolio name
+  const groups = useMemo<PortfolioGroup[]>(() => {
+    const filtered = filterType === 'all' ? transactions : transactions.filter((t) => t.type === filterType);
+    const map = new Map<string, PortfolioGroup>();
 
-  const totals = transactions.reduce((acc, t) => {
-    if (t.type === 'buy')      acc.bought  += t.total;
-    if (t.type === 'sell')     acc.sold    += t.total;
+    for (const tx of filtered) {
+      const pId = tx.portfolioId ?? (tx.portfolio as { id: string } | undefined)?.id ?? '';
+      if (!map.has(pId)) {
+        const portfolio = portfolios.find((p) => p.id === pId);
+        if (!portfolio) continue;
+        map.set(pId, { portfolio, transactions: [], totalBought: 0, totalSold: 0 });
+      }
+      const g = map.get(pId)!;
+      g.transactions.push(tx);
+      if (tx.type === 'buy')  g.totalBought += tx.total + tx.fee;
+      if (tx.type === 'sell') g.totalSold   += tx.total;
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.portfolio.name.localeCompare(b.portfolio.name));
+  }, [transactions, portfolios, filterType]);
+
+  const totals = useMemo(() => transactions.reduce((acc, t) => {
+    if (t.type === 'buy')      acc.bought    += t.total + t.fee;
+    if (t.type === 'sell')     acc.sold      += t.total;
     if (t.type === 'dividend') acc.dividends += t.total;
     return acc;
-  }, { bought: 0, sold: 0, dividends: 0 });
+  }, { bought: 0, sold: 0, dividends: 0 }), [transactions]);
 
-  if (loading) return (
-    <div className="space-y-4">
-      <SkeletonCard />
-      <SkeletonCard />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Spinner size="md" />
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Transactions</h1>
-          <p className="text-text-secondary text-sm mt-1">Your complete trade history</p>
+          <h1 className="text-2xl font-bold text-text-primary">Transacciones</h1>
+          <p className="text-text-secondary text-sm mt-1">
+            {transactions.length} operación{transactions.length !== 1 ? 'es' : ''} en {portfolios.length} portfolio{portfolios.length !== 1 ? 's' : ''}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleExport}>
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Transaction
-          </Button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'Total Bought', value: totals.bought,    color: 'text-gain',    bg: 'bg-gain/10'    },
-          { label: 'Total Sold',   value: totals.sold,      color: 'text-loss',    bg: 'bg-loss/10'    },
-          { label: 'Dividends',    value: totals.dividends, color: 'text-warning', bg: 'bg-warning/10' },
-        ].map((s) => (
-          <div key={s.label} className="glass-card rounded-2xl p-5 border border-border/50">
-            <p className="text-text-secondary text-sm mb-1">{s.label}</p>
-            <p className={`text-2xl font-bold font-mono-num ${s.color}`}>
-              {formatCurrency(s.value)}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 mb-6">
-        <Filter className="w-4 h-4 text-text-muted" />
-        {['all', 'buy', 'sell', 'dividend'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setFilterType(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize
-              ${filterType === t ? 'bg-primary text-white' : 'bg-surface-2 text-text-secondary hover:text-text-primary border border-border'}`}
-          >
-            {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-        <span className="ml-auto text-sm text-text-muted">{filtered.length} transactions</span>
-      </div>
-
-      {/* Transactions List */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <History className="w-8 h-8 text-text-muted" />
-          </div>
-          <h3 className="text-lg font-semibold text-text-primary mb-2">No transactions yet</h3>
-          <p className="text-text-secondary text-sm mb-6 max-w-xs mx-auto">
-            Start logging your trades to build a complete history of your investment activity.
-          </p>
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Your First Transaction
+          {transactions.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={handleExport}>
+              <Download className="w-4 h-4" /> Exportar
+            </Button>
+          )}
+          <Button size="sm" onClick={() => setAddModalOpen(true)}>
+            <Plus className="w-4 h-4" /> Nueva Operación
           </Button>
         </div>
-      ) : (
-        <div className="glass-card rounded-2xl border border-border/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border/50 bg-surface-2/50">
-                  {['Date', 'Type', 'Asset', 'Shares', 'Price', 'Total', 'Portfolio'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((tx, i) => {
-                  const config = TYPE_COLORS[tx.type as keyof typeof TYPE_COLORS] ?? TYPE_COLORS.buy;
-                  const Icon = config.icon;
-                  return (
-                    <tr
-                      key={tx.id}
-                      className={`border-b border-border/30 hover:bg-primary/5 transition-colors ${i === filtered.length - 1 ? 'border-0' : ''}`}
-                    >
-                      <td className="px-4 py-3.5 text-sm text-text-secondary whitespace-nowrap">
-                        {formatDate(tx.date)}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${config.bg} ${config.text}`}>
-                          <Icon className="w-3 h-3" />
-                          {config.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <p className="text-sm font-semibold text-text-primary">{tx.ticker}</p>
-                        <p className="text-xs text-text-muted truncate max-w-[140px]">{tx.name}</p>
-                      </td>
-                      <td className="px-4 py-3.5 text-sm text-text-primary font-mono-num">
-                        {tx.shares.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3.5 text-sm text-text-primary font-mono-num">
-                        {formatCurrency(tx.price)}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`text-sm font-semibold font-mono-num ${config.text}`}>
-                          {tx.type === 'sell' ? '-' : '+'}{formatCurrency(tx.total)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-sm text-text-muted truncate max-w-[120px]">
-                        {tx.portfolio?.name ?? '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      </div>
+
+      {/* Summary */}
+      {transactions.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Total invertido', value: totals.bought,    color: 'text-loss',    sign: '−' },
+            { label: 'Total vendido',   value: totals.sold,      color: 'text-gain',    sign: '+' },
+            { label: 'Dividendos',      value: totals.dividends, color: 'text-primary', sign: '+' },
+          ].map((s) => (
+            <div key={s.label} className="bg-surface border border-border rounded-2xl p-4">
+              <p className="text-xs text-text-muted uppercase tracking-wider mb-1">{s.label}</p>
+              <p className={`text-xl font-bold font-mono-num ${s.color}`}>
+                {s.sign}{formatCurrency(s.value)}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Add Transaction Modal */}
-      <Modal isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add Transaction" size="md">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">Portfolio *</label>
-              <select
-                value={form.portfolioId}
-                onChange={(e) => setForm({ ...form, portfolioId: e.target.value })}
-                required
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="">Select portfolio...</option>
-                {portfolios.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
+      {/* Filter */}
+      {transactions.length > 0 && (
+        <div className="flex items-center gap-2">
+          {[
+            { key: 'all',      label: 'Todas' },
+            { key: 'buy',      label: 'Compras'    },
+            { key: 'sell',     label: 'Ventas'     },
+            { key: 'dividend', label: 'Dividendos' },
+          ].map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilterType(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filterType === f.key
+                  ? 'bg-primary text-white'
+                  : 'bg-surface border border-border text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-            <div>
-              <label className="text-sm font-medium text-text-secondary block mb-1.5">Type *</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as 'buy' | 'sell' | 'dividend' })}
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
-                <option value="dividend">Dividend</option>
-              </select>
-            </div>
-
-            <Input
-              label="Date *"
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              required
-            />
-
-            <Input
-              label="Ticker Symbol *"
-              placeholder="e.g. AAPL"
-              value={form.ticker}
-              onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })}
-              required
-            />
-
-            <Input
-              label="Asset Name"
-              placeholder="e.g. Apple Inc."
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-
-            <Input
-              label="Shares *"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={form.shares}
-              onChange={(e) => setForm({ ...form, shares: e.target.value })}
-              required
-            />
-
-            <Input
-              label="Price per Share *"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              required
-            />
-
-            <Input
-              label="Broker Fee"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="0.00"
-              value={form.fee}
-              onChange={(e) => setForm({ ...form, fee: e.target.value })}
-            />
-
-            <Input
-              label="Broker / Platform"
-              placeholder="e.g. Robinhood"
-              value={form.broker}
-              onChange={(e) => setForm({ ...form, broker: e.target.value })}
-            />
+      {/* Portfolio groups */}
+      {groups.length === 0 ? (
+        <div className="text-center py-24 bg-surface border border-border rounded-2xl">
+          <div className="w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-text-muted" />
           </div>
+          <h3 className="text-text-primary font-semibold mb-2">Sin transacciones</h3>
+          <p className="text-text-muted text-sm mb-6">Registrá tu primera operación para empezar el historial</p>
+          <Button onClick={() => setAddModalOpen(true)}>
+            <Plus className="w-4 h-4" /> Nueva Operación
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {groups.map((group) => (
+            <PortfolioSection
+              key={group.portfolio.id}
+              group={group}
+              expanded={expanded.has(group.portfolio.id)}
+              onToggle={() => togglePortfolio(group.portfolio.id)}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
+          ))}
+        </div>
+      )}
 
-          {form.shares && form.price && (
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm">
-              <span className="text-text-secondary">Total: </span>
-              <span className="text-primary font-semibold font-mono-num">
-                {formatCurrency(parseFloat(form.shares || '0') * parseFloat(form.price || '0'))}
-              </span>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <Button type="button" variant="secondary" onClick={() => setAddOpen(false)} className="flex-1">
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting} className="flex-1">
-              Add Transaction
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <AddTransactionModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        portfolios={portfolios}
+        onSuccess={() => { setAddModalOpen(false); loadData(); }}
+      />
     </div>
   );
 }
