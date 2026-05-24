@@ -44,6 +44,8 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
   const [date,           setDate]            = useState(today);
   const [shares,         setShares]          = useState('');
   const [price,          setPrice]           = useState('');
+  const [totalOverride,  setTotalOverride]   = useState('');  // editable base amount
+  const [totalManual,    setTotalManual]     = useState(false); // user typed it manually
   const [priceLoading,   setPriceLoading]    = useState(false);
   const [priceAutoFilled,setPriceAutoFilled] = useState(false);
   const [fee,            setFee]             = useState('');
@@ -103,6 +105,7 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
     setSelectedPortfolioId(fixedPortfolioId ?? '');
     setTxType('buy'); setSearchQuery(''); setSelectedTicker(''); setSelectedName('');
     setAssetType('stock'); setDate(today); setShares(''); setPrice('');
+    setTotalOverride(''); setTotalManual(false);
     setPriceAutoFilled(false); setFee(''); setBroker(''); setNotes(''); setError('');
     setSearchResults([]); setShowDropdown(false);
   };
@@ -124,6 +127,8 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
       const txShares = parseFloat(shares);
       const txPrice  = parseFloat(price);
       const txFee    = parseFloat(fee) || 0;
+      // Use manually entered total if provided, otherwise calculate from shares × price
+      const txTotal  = totalManual && totalOverride ? parseFloat(totalOverride) : txShares * txPrice;
 
       const res = await fetch('/api/transactions', {
         method:  'POST',
@@ -135,7 +140,7 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
           type:      txType,
           shares:    txShares,
           price:     txPrice,
-          total:     txShares * txPrice,
+          total:     txTotal,
           fee:       txFee,
           date:      date || today(),
           broker:    broker || undefined,
@@ -159,10 +164,11 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
     }
   };
 
-  const txShares = parseFloat(shares) || 0;
-  const txPrice  = parseFloat(price)  || 0;
-  const txFee    = parseFloat(fee)    || 0;
-  const total    = txShares * txPrice + (txType === 'buy' ? txFee : -txFee);
+  const txShares   = parseFloat(shares) || 0;
+  const txPrice    = parseFloat(price)  || 0;
+  const txFee      = parseFloat(fee)    || 0;
+  const baseAmount = (totalManual && totalOverride) ? parseFloat(totalOverride) : txShares * txPrice;
+  const total      = baseAmount + (txType === 'buy' ? txFee : -txFee);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Registrar Operación" size="md">
@@ -313,6 +319,38 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
           </div>
         </div>
 
+        {/* Monto real invertido — overridable when broker rounds shares */}
+        {txType === 'buy' && txShares > 0 && txPrice > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-medium text-text-secondary">
+                Monto invertido
+              </label>
+              {totalManual && (
+                <button type="button" onClick={() => { setTotalManual(false); setTotalOverride(''); }}
+                  className="text-xs text-text-muted hover:text-primary transition-colors">
+                  Resetear
+                </button>
+              )}
+            </div>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              value={totalManual ? totalOverride : (txShares * txPrice).toFixed(2)}
+              onChange={(e) => { setTotalOverride(e.target.value); setTotalManual(true); }}
+              className={`w-full bg-surface border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors ${
+                totalManual ? 'border-warning/40 bg-warning/5' : 'border-border'
+              }`}
+            />
+            {!totalManual && (
+              <p className="text-xs text-text-muted mt-1">
+                Si el broker redondeó las acciones, corregí el monto exacto aquí (ej: $100.00)
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Fee */}
         {txType !== 'dividend' && (
           <Input label="Comisión / Fee (opcional)" type="number" placeholder="0.00"
@@ -325,22 +363,35 @@ export function AddTransactionModal({ isOpen, onClose, portfolioId: fixedPortfol
 
         {/* Preview */}
         {txShares > 0 && txPrice > 0 && (
-          <div className={`rounded-xl p-3 border ${
-            txType === 'buy'
-              ? 'bg-loss/5 border-loss/20'
-              : txType === 'sell'
-              ? 'bg-gain/5 border-gain/20'
-              : 'bg-primary/5 border-primary/20'
+          <div className={`rounded-xl p-3 border space-y-1 ${
+            txType === 'buy'  ? 'bg-loss/5 border-loss/20' :
+            txType === 'sell' ? 'bg-gain/5 border-gain/20' :
+                                'bg-primary/5 border-primary/20'
           }`}>
-            <p className="text-xs text-text-muted mb-1">
-              {txType === 'buy' ? 'Total a pagar' : txType === 'sell' ? 'Total a recibir' : 'Total dividendo'}
-            </p>
-            <p className={`text-sm font-bold ${txType === 'buy' ? 'text-loss' : 'text-gain'}`}>
-              ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-text-muted">Monto base</p>
+              <p className="text-xs font-mono-num text-text-secondary">
+                ${baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {totalManual && <span className="ml-1 text-warning text-[10px]">✎ editado</span>}
+              </p>
+            </div>
             {txFee > 0 && (
-              <p className="text-xs text-text-muted mt-0.5">
-                {txType === 'buy' ? `incluye $${txFee.toFixed(2)} de comisión` : `menos $${txFee.toFixed(2)} de comisión`}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-muted">Comisión</p>
+                <p className="text-xs font-mono-num text-text-secondary">+${txFee.toFixed(2)}</p>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1 border-t border-border/40">
+              <p className="text-xs font-medium text-text-primary">
+                {txType === 'buy' ? 'Total pagado' : txType === 'sell' ? 'Total recibido' : 'Total'}
+              </p>
+              <p className={`text-sm font-bold font-mono-num ${txType === 'buy' ? 'text-loss' : 'text-gain'}`}>
+                ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            {txShares > 0 && total > 0 && (
+              <p className="text-xs text-text-muted text-right">
+                Costo promedio: ${((total) / txShares).toFixed(4)}/acción
               </p>
             )}
           </div>
