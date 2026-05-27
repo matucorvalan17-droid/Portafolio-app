@@ -3,32 +3,45 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+function validatePassword(pw: string) {
+  return {
+    length:  pw.length >= 8,
+    upper:   /[A-Z]/.test(pw),
+    number:  /[0-9]/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw),
+  };
+}
+
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name,            setName]            = useState('');
+  const [email,           setEmail]           = useState('');
+  const [password,        setPassword]        = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error,           setError]           = useState('');
+  const [success,         setSuccess]         = useState('');
+  const [loading,         setLoading]         = useState(false);
+  const [pwFocused,       setPwFocused]       = useState(false);
+
+  const pwChecks = validatePassword(password);
+  const pwValid  = Object.values(pwChecks).every(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (!pwValid) {
+      setError('La contraseña no cumple los requisitos');
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
       return;
     }
 
@@ -48,7 +61,7 @@ export default function RegisterPage() {
         return;
       }
 
-      setSuccess('Account created! Redirecting to login...');
+      setSuccess('¡Cuenta creada! Redirigiendo…');
       setTimeout(() => {
         router.push('/login');
       }, 1500);
@@ -63,9 +76,9 @@ export default function RegisterPage() {
     <div className="w-full max-w-md">
       <div className="glass-card rounded-2xl p-8 shadow-card border border-border">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-primary mb-2">Create your account</h1>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">Crear cuenta</h1>
           <p className="text-text-secondary text-sm">
-            Start tracking your portfolio in minutes
+            Empezá a trackear tu patrimonio en minutos
           </p>
         </div>
 
@@ -85,9 +98,9 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Full name"
+            label="Nombre completo"
             type="text"
-            placeholder="John Doe"
+            placeholder="Juan García"
             value={name}
             onChange={(e) => setName(e.target.value)}
             icon={<User className="w-4 h-4" />}
@@ -95,35 +108,57 @@ export default function RegisterPage() {
             autoComplete="name"
           />
           <Input
-            label="Email address"
+            label="Email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="vos@ejemplo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             icon={<Mail className="w-4 h-4" />}
             required
             autoComplete="email"
           />
+          <div>
+            <Input
+              label="Contraseña"
+              type="password"
+              placeholder="Mín. 8 caracteres"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setPwFocused(true)}
+              onBlur={() => setPwFocused(false)}
+              icon={<Lock className="w-4 h-4" />}
+              required
+              autoComplete="new-password"
+            />
+            {/* Password strength checklist */}
+            {(pwFocused || password.length > 0) && (
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                {[
+                  { ok: pwChecks.length,  label: '8 caracteres' },
+                  { ok: pwChecks.upper,   label: '1 mayúscula'  },
+                  { ok: pwChecks.number,  label: '1 número'     },
+                  { ok: pwChecks.special, label: '1 símbolo (!@#…)' },
+                ].map(({ ok, label }) => (
+                  <div key={label} className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? 'text-gain' : 'text-text-muted'}`}>
+                    {ok
+                      ? <CheckCircle className="w-3 h-3 shrink-0" />
+                      : <X className="w-3 h-3 shrink-0" />}
+                    {label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <Input
-            label="Password"
+            label="Confirmar contraseña"
             type="password"
-            placeholder="Min. 8 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            icon={<Lock className="w-4 h-4" />}
-            required
-            autoComplete="new-password"
-          />
-          <Input
-            label="Confirm password"
-            type="password"
-            placeholder="Repeat your password"
+            placeholder="Repetí tu contraseña"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             icon={<Lock className="w-4 h-4" />}
             required
             autoComplete="new-password"
-            error={confirmPassword && password !== confirmPassword ? 'Passwords do not match' : ''}
+            error={confirmPassword && password !== confirmPassword ? 'Las contraseñas no coinciden' : ''}
           />
 
           <Button
@@ -133,18 +168,18 @@ export default function RegisterPage() {
             loading={loading}
             disabled={!!success}
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creando cuenta…' : 'Crear cuenta'}
           </Button>
         </form>
 
         <div className="mt-6 pt-6 border-t border-border text-center">
           <p className="text-text-secondary text-sm">
-            Already have an account?{' '}
+            ¿Ya tenés cuenta?{' '}
             <Link
               href="/login"
               className="text-primary hover:text-primary-hover font-medium transition-colors"
             >
-              Sign in
+              Iniciá sesión
             </Link>
           </p>
         </div>

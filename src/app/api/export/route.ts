@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const type = req.nextUrl.searchParams.get('type') ?? 'holdings';
 

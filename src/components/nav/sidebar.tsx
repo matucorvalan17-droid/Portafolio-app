@@ -1,24 +1,12 @@
 'use client';
-// WealthTrack — Sidebar Navigation
-// The left-side nav menu that appears on all dashboard pages.
-// To add a new page to the navigation, add a new entry in the `navItems` array below.
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
-  TrendingUp,
-  LayoutDashboard,
-  Briefcase,
-  Settings,
-  LogOut,
-  ChevronDown,
-  Plus,
-  ChevronRight,
-  History,
-  Star,
-  BarChart3,
+  TrendingUp, LayoutDashboard, Briefcase, Settings, LogOut,
+  ChevronDown, Plus, History, Star, BarChart3, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Portfolio } from '@/types';
@@ -29,159 +17,233 @@ interface SidebarProps {
   userEmail: string;
   userImage?: string | null;
   onNewPortfolio: () => void;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-// ─── ADD NEW NAV PAGES HERE ───────────────────────────────────────
-// To add a new page to the nav, add it to this array.
 const topNavItems = [
-  { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard'    },
+  { href: '/dashboard',    icon: LayoutDashboard, label: 'Patrimonio'   },
   { href: '/analytics',    icon: BarChart3,        label: 'Analytics'    },
-  { href: '/transactions', icon: History,          label: 'Transactions' },
+  { href: '/transactions', icon: History,          label: 'Transacciones'},
   { href: '/watchlist',    icon: Star,             label: 'Watchlist'    },
 ];
 
-export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortfolio }: SidebarProps) {
-  const pathname = usePathname();
-  const [portfoliosOpen, setPortfoliosOpen] = useState(true);
+function Tooltip({ label, show }: { label: string; show: boolean }) {
+  if (!show) return null;
+  return (
+    <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-surface-2 border border-[rgba(255,255,255,0.12)] rounded-lg text-xs font-medium text-text-primary whitespace-nowrap z-50 shadow-elevated pointer-events-none">
+      {label}
+    </div>
+  );
+}
 
-  const isActive = (href: string) => pathname === href;
+export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortfolio, onCollapsedChange }: SidebarProps) {
+  const pathname         = usePathname();
+  const [collapsed,      setCollapsed]      = useState(false);
+  const [portfoliosOpen, setPortfoliosOpen] = useState(true);
+  const [tooltip,        setTooltip]        = useState('');
+
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    onCollapsedChange?.(next);
+  };
+
+  const isActive          = (href: string) => pathname === href;
   const isPortfolioActive = pathname.startsWith('/portfolio/');
 
+  const w = collapsed ? 'w-16' : 'w-64';
+
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-surface border-r border-border flex flex-col z-40">
-      {/* ── Logo ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-6 py-5 border-b border-border">
-        <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0 shadow-glow-primary">
+    <aside className={cn(
+      'fixed left-0 top-0 h-full bg-surface border-r border-[rgba(255,255,255,0.08)] flex flex-col z-40 transition-all duration-300',
+      w
+    )}>
+      {/* Logo */}
+      <div className={cn('flex items-center border-b border-[rgba(255,255,255,0.08)] transition-all duration-300 h-16',
+        collapsed ? 'justify-center px-0' : 'gap-2.5 px-5'
+      )}>
+        <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
           <TrendingUp className="w-4 h-4 text-white" />
         </div>
-        <span className="text-base font-bold text-text-primary">WealthTrack</span>
+        {!collapsed && <span className="text-base font-bold text-text-primary tracking-tight">WealthTrack</span>}
       </div>
 
-      {/* ── User Info ────────────────────────────────────────────── */}
-      <div className="px-4 py-4 border-b border-border">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-surface-2">
-          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-            {userImage ? (
-              <img src={userImage} alt={userName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary">{userName.charAt(0).toUpperCase()}</span>
-              </div>
-            )}
+      {/* User */}
+      <div className={cn('border-b border-[rgba(255,255,255,0.08)] transition-all duration-300',
+        collapsed ? 'py-3 flex justify-center' : 'px-4 py-3'
+      )}>
+        {collapsed ? (
+          <div className="w-8 h-8 rounded-full overflow-hidden relative group" onMouseEnter={() => setTooltip(userName)} onMouseLeave={() => setTooltip('')}>
+            {userImage
+              ? <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-primary/20 flex items-center justify-center"><span className="text-sm font-semibold text-primary">{userName.charAt(0).toUpperCase()}</span></div>}
+            <Tooltip label={userName} show={tooltip === userName} />
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-text-primary truncate">{userName}</p>
-            <p className="text-xs text-text-muted truncate">{userEmail}</p>
+        ) : (
+          <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-surface-2">
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+              {userImage
+                ? <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-primary/20 flex items-center justify-center"><span className="text-sm font-semibold text-primary">{userName.charAt(0).toUpperCase()}</span></div>}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-text-primary truncate">{userName}</p>
+              <p className="text-xs text-text-muted truncate">{userEmail}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ── Main Navigation ──────────────────────────────────────── */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
+      {/* Nav */}
+      <nav className="flex-1 py-3 overflow-y-auto space-y-0.5 px-2">
         {topNavItems.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-              isActive(href)
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-            )}
-          >
-            <Icon className="w-4 h-4 flex-shrink-0" />
-            {label}
-          </Link>
+          <div key={href} className="relative group" onMouseEnter={() => collapsed && setTooltip(label)} onMouseLeave={() => setTooltip('')}>
+            <Link
+              href={href}
+              className={cn(
+                'flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150',
+                collapsed ? 'justify-center px-0 py-2.5 w-full h-10' : 'px-3 py-2.5',
+                isActive(href)
+                  ? 'bg-primary/10 text-primary border border-primary/20'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+              )}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {!collapsed && label}
+            </Link>
+            {collapsed && <Tooltip label={label} show={tooltip === label} />}
+          </div>
         ))}
 
-        {/* ── Portfolios Section ─────────────────────────────────── */}
-        <div className="pt-2">
-          <button
-            onClick={() => setPortfoliosOpen(!portfoliosOpen)}
-            className={cn(
-              'flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-              isPortfolioActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <Briefcase className="w-4 h-4 flex-shrink-0" />
-              Portfolios
+        {/* Portfolios section */}
+        <div className="pt-1">
+          {collapsed ? (
+            <div className="relative group" onMouseEnter={() => setTooltip('Portfolios')} onMouseLeave={() => setTooltip('')}>
+              <button
+                onClick={() => setPortfoliosOpen(!portfoliosOpen)}
+                className={cn(
+                  'flex items-center justify-center w-full py-2.5 h-10 rounded-xl transition-all duration-150',
+                  isPortfolioActive ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+                )}
+              >
+                <Briefcase className="w-4 h-4" />
+              </button>
+              <Tooltip label="Portfolios" show={tooltip === 'Portfolios'} />
             </div>
-            <ChevronDown
-              className={cn('w-3.5 h-3.5 transition-transform duration-200', portfoliosOpen && 'rotate-180')}
-            />
-          </button>
+          ) : (
+            <button
+              onClick={() => setPortfoliosOpen(!portfoliosOpen)}
+              className={cn(
+                'flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                isPortfolioActive ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-4 h-4 flex-shrink-0" />
+                Portfolios
+              </div>
+              <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', portfoliosOpen && 'rotate-180')} />
+            </button>
+          )}
 
           {portfoliosOpen && (
-            <div className="mt-1 ml-4 space-y-0.5 border-l border-border pl-3">
+            <div className={cn('mt-1 space-y-0.5', !collapsed && 'ml-4 border-l border-[rgba(255,255,255,0.08)] pl-3')}>
               {portfolios.map((portfolio) => (
-                <Link
-                  key={portfolio.id}
-                  href={`/portfolio/${portfolio.id}`}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-150',
-                    pathname === `/portfolio/${portfolio.id}`
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-text-muted hover:text-text-primary hover:bg-surface-2'
-                  )}
-                >
-                  <div className="w-4 h-4 rounded flex-shrink-0 overflow-hidden">
-                    {portfolio.image ? (
-                      <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                        <span className="text-[9px] font-bold text-primary leading-none">
-                          {portfolio.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                collapsed ? (
+                  <div key={portfolio.id} className="relative group flex justify-center" onMouseEnter={() => setTooltip(portfolio.id)} onMouseLeave={() => setTooltip('')}>
+                    <Link href={`/portfolio/${portfolio.id}`}
+                      className={cn('w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden border transition-all',
+                        pathname === `/portfolio/${portfolio.id}`
+                          ? 'border-primary/40 bg-primary/10'
+                          : 'border-[rgba(255,255,255,0.08)] hover:border-primary/30'
+                      )}>
+                      {portfolio.image
+                        ? <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
+                        : <span className="text-[10px] font-bold text-primary">{portfolio.name.charAt(0).toUpperCase()}</span>}
+                    </Link>
+                    <Tooltip label={portfolio.name} show={tooltip === portfolio.id} />
                   </div>
-                  <span className="truncate">{portfolio.name}</span>
-                </Link>
+                ) : (
+                  <Link
+                    key={portfolio.id}
+                    href={`/portfolio/${portfolio.id}`}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-150',
+                      pathname === `/portfolio/${portfolio.id}`
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-text-muted hover:text-text-primary hover:bg-surface-2'
+                    )}
+                  >
+                    <div className="w-4 h-4 rounded flex-shrink-0 overflow-hidden">
+                      {portfolio.image
+                        ? <img src={portfolio.image} alt={portfolio.name} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full bg-primary/20 flex items-center justify-center"><span className="text-[9px] font-bold text-primary leading-none">{portfolio.name.charAt(0).toUpperCase()}</span></div>}
+                    </div>
+                    <span className="truncate">{portfolio.name}</span>
+                  </Link>
+                )
               ))}
-
-              {portfolios.length === 0 && (
-                <p className="text-xs text-text-muted px-3 py-2 italic">No portfolios yet</p>
+              {portfolios.length === 0 && !collapsed && (
+                <p className="text-xs text-text-muted px-3 py-2 italic">Sin portfolios</p>
               )}
-
-              <button
-                onClick={onNewPortfolio}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-muted hover:text-primary hover:bg-primary/5 transition-all duration-150 w-full"
-              >
-                <Plus className="w-3 h-3 flex-shrink-0" />
-                New Portfolio
-              </button>
+              {!collapsed && (
+                <button onClick={onNewPortfolio} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-muted hover:text-primary hover:bg-primary/5 transition-all w-full">
+                  <Plus className="w-3 h-3 flex-shrink-0" />
+                  Nuevo Portfolio
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* ── Settings ─────────────────────────────────────────────── */}
-        <div className="pt-2">
-          <Link
-            href="/settings"
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
-              isActive('/settings')
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-            )}
-          >
-            <Settings className="w-4 h-4 flex-shrink-0" />
-            Settings
-          </Link>
+        {/* Settings */}
+        <div className="pt-1">
+          <div className="relative group" onMouseEnter={() => collapsed && setTooltip('settings')} onMouseLeave={() => setTooltip('')}>
+            <Link
+              href="/settings"
+              className={cn(
+                'flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150',
+                collapsed ? 'justify-center px-0 py-2.5 w-full h-10' : 'px-3 py-2.5',
+                isActive('/settings')
+                  ? 'bg-primary/10 text-primary border border-primary/20'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
+              )}
+            >
+              <Settings className="w-4 h-4 flex-shrink-0" />
+              {!collapsed && 'Configuración'}
+            </Link>
+            {collapsed && <Tooltip label="Configuración" show={tooltip === 'settings'} />}
+          </div>
         </div>
       </nav>
 
-      {/* ── Sign Out ─────────────────────────────────────────────── */}
-      <div className="px-3 pb-4 border-t border-border pt-3">
+      {/* Bottom: toggle + sign out */}
+      <div className="px-2 pb-3 pt-3 border-t border-[rgba(255,255,255,0.08)] space-y-0.5">
+        {/* Sign out */}
+        <div className="relative group" onMouseEnter={() => collapsed && setTooltip('signout')} onMouseLeave={() => setTooltip('')}>
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className={cn(
+              'flex items-center gap-3 rounded-xl text-sm font-medium text-text-muted hover:text-loss hover:bg-loss/10 transition-all duration-150 w-full',
+              collapsed ? 'justify-center py-2.5 h-10' : 'px-3 py-2.5'
+            )}
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && 'Salir'}
+          </button>
+          {collapsed && <Tooltip label="Salir" show={tooltip === 'signout'} />}
+        </div>
+
+        {/* Collapse toggle */}
         <button
-          onClick={() => signOut({ callbackUrl: '/' })}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:text-loss hover:bg-loss/10 transition-all duration-150 w-full"
+          onClick={toggle}
+          className={cn(
+            'flex items-center gap-3 rounded-xl text-sm font-medium text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all duration-150 w-full',
+            collapsed ? 'justify-center py-2.5 h-10' : 'px-3 py-2.5'
+          )}
+          title={collapsed ? 'Expandir menú' : 'Comprimir menú'}
         >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          Sign Out
+          {collapsed ? <PanelLeftOpen className="w-4 h-4 flex-shrink-0" /> : <><PanelLeftClose className="w-4 h-4 flex-shrink-0" />Comprimir</>}
         </button>
       </div>
     </aside>

@@ -20,7 +20,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [newPortfolioName,    setNewPortfolioName]    = useState('');
   const [newPortfolioCurrency,setNewPortfolioCurrency]= useState('USD');
   const [newPortfolioImage,   setNewPortfolioImage]   = useState('');
-  const [creating,            setCreating]            = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [creating,         setCreating]         = useState(false);
   const portfolioImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -111,10 +112,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         userEmail={session.user.email}
         userImage={(session.user as { image?: string | null }).image}
         onNewPortfolio={() => setNewPortfolioOpen(true)}
+        onCollapsedChange={setSidebarCollapsed}
       />
 
-      {/* Main content */}
-      <main className="flex-1 ml-64 min-h-screen">
+      {/* Main content — margin tracks sidebar width */}
+      <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         <div className="max-w-7xl mx-auto px-6 py-8">
           {children}
         </div>
