@@ -32,9 +32,6 @@ function BrokerChip({ broker }: { broker: string }) {
 
 export function PortfolioCard({ portfolio, index = 0 }: PortfolioCardProps) {
   const isPositive = portfolio.totalGainLoss >= 0;
-  const gainPct    = portfolio.totalCost > 0
-    ? Math.min(100, Math.max(0, (portfolio.totalValue / (portfolio.totalCost || 1)) * 50))
-    : 50;
 
   const brokers        = Array.from(new Set((portfolio.holdings ?? []).map((h) => h.broker).filter((b): b is string => !!b?.trim())));
   const visibleBrokers = brokers.slice(0, 4);
@@ -51,9 +48,9 @@ export function PortfolioCard({ portfolio, index = 0 }: PortfolioCardProps) {
         <div className={`
           relative bg-surface-2 border rounded-[20px] p-5 overflow-hidden h-full
           transition-all duration-200
-          border-[rgba(255,255,255,0.08)]
-          group-hover:border-primary/35
-          group-hover:shadow-[0_0_0_1px_rgba(73,79,223,0.2),0_8px_32px_rgba(0,0,0,0.5)]
+          ${isPositive
+            ? 'border-gain/20 group-hover:border-gain/50 group-hover:shadow-[0_0_0_1px_rgba(0,168,126,0.2),0_8px_32px_rgba(0,0,0,0.5)]'
+            : 'border-loss/20 group-hover:border-loss/50 group-hover:shadow-[0_0_0_1px_rgba(226,59,74,0.2),0_8px_32px_rgba(0,0,0,0.5)]'}
         `}>
 
           {/* Top accent line — gain=cobalt, loss=red */}
@@ -96,16 +93,6 @@ export function PortfolioCard({ portfolio, index = 0 }: PortfolioCardProps) {
           <p className="text-xs text-text-muted mb-4">
             Base {formatCurrency(portfolio.totalCost, portfolio.currency, true)}
           </p>
-
-          {/* Progress bar — visual representation of gain/loss */}
-          <div className="mb-4 h-1 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-            <motion.div
-              className={`h-full rounded-full ${isPositive ? 'bg-primary' : 'bg-loss'}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${gainPct}%` }}
-              transition={{ duration: 0.6, delay: index * 0.07 + 0.3, ease: 'easeOut' }}
-            />
-          </div>
 
           {/* Gain/loss + brokers */}
           <div className="flex items-center justify-between relative">
