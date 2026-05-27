@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { portfolioId, ticker, name, shares, avgCost, purchaseDate, broker, assetType, currency, notes } = body;
+    const { portfolioId, ticker, name, shares, avgCost, fee, purchaseDate, broker, assetType, currency, notes } = body;
 
     if (!portfolioId || !ticker || !name || shares === undefined || avgCost === undefined) {
       return NextResponse.json(
@@ -64,18 +64,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
     }
 
-    const holding = await db.holding.create({
+    const normalizedTicker = ticker.toUpperCase().trim();
+    const newShares  = parseFloat(shares);
+    const feeAmount  = parseFloat(fee) || 0;
+    // Bake fee into the per-share cost: (shares × price + fee) / shares
+    const rawPrice   = parseFloat(avgCost);
+    const newAvgCost = feeAmount > 0 ? (newShares * rawPrice + feeAmount) / newShares : rawPrice;
+
+    // Merge with existing holding of same ticker (weighted avg cost)
+    const existing = await db.holding.findFirst({
+      where: { portfolioId, ticker: normalizedTicker },
+    });
+
+    let holding;
+    if (existing) {
+      const totalShares  = existing.shares + newShares;
+      const weightedCost = (existing.shares * existing.avgCost + newShares * newAvgCost) / totalShares;
+      holding = await db.holding.update({
+        where: { id: existing.id },
+        data: {
+          shares:  totalShares,
+          avgCost: weightedCost,
+          // Update name/broker/notes if provided
+          ...(name        && { name: name.trim() }),
+          ...(broker      && { broker: broker.trim() }),
+          ...(notes       && { notes: notes.trim() }),
+          ...(assetType   && { assetType }),
+          purchaseDate: purchaseDate ? new Date(purchaseDate) : existing.purchaseDate,
+        },
+      });
+    } else {
+      holding = await db.holding.create({
+        data: {
+          portfolioId,
+          ticker: normalizedTicker,
+          name: name.trim(),
+          shares:  newShares,
+          avgCost: newAvgCost,
+          purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
+          broker: broker?.trim() || null,
+          assetType: assetType || 'stock',
+          currency: currency || portfolio.currency || 'USD',
+          notes: notes?.trim() || null,
+        },
+      });
+    }
+
+    // Auto-log a buy transaction for history
+    await db.transaction.create({
       data: {
         portfolioId,
-        ticker: ticker.toUpperCase().trim(),
-        name: name.trim(),
-        shares: parseFloat(shares),
-        avgCost: parseFloat(avgCost),
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        broker: broker?.trim() || null,
-        assetType: assetType || 'stock',
-        currency: currency || portfolio.currency || 'USD',
-        notes: notes?.trim() || null,
+        ticker:  normalizedTicker,
+        name:    (name as string).trim(),
+        type:    'buy',
+        shares:  newShares,
+        price:   rawPrice,
+        total:   newShares * rawPrice,
+        fee:     feeAmount,
+        date:    purchaseDate ? new Date(purchaseDate) : new Date(),
+        broker:  (broker as string | undefined)?.trim() || null,
+        notes:   (notes as string | undefined)?.trim() || null,
       },
     });
 

@@ -1,10 +1,9 @@
 'use client';
 // WealthTrack — Dashboard Page
-// The main overview page showing all portfolios and your total wealth.
-// This page auto-refreshes prices every 30 seconds.
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, TrendingUp, Download } from 'lucide-react';
+import { Plus, RefreshCw, TrendingUp, Download, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { StatsOverview } from '@/components/dashboard/stats-overview';
 import { PortfolioCard } from '@/components/dashboard/portfolio-card';
 import { SkeletonCard } from '@/components/ui/loading';
@@ -13,6 +12,13 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { Portfolio, Holding, Quote, PortfolioWithStats } from '@/types';
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 18) return 'Buenas tardes';
+  return 'Buenas noches';
+}
 
 export default function DashboardPage() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
@@ -138,28 +144,36 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* ── Header ──────────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-8">
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="flex items-start justify-between mb-8"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-text-secondary text-sm mt-1">Your complete financial overview</p>
+          <p className="text-text-muted text-xs uppercase tracking-widest font-medium mb-1">{getGreeting()}</p>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Tu panel financiero</h1>
+          <p className="text-text-muted text-sm mt-1">
+            {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleExport} title="Export all holdings as CSV">
+          <Button variant="ghost" size="sm" onClick={handleExport} title="Exportar holdings como CSV">
             <Download className="w-4 h-4" />
-            Export
+            Exportar
           </Button>
           <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+            {refreshing ? 'Actualizando…' : 'Actualizar'}
           </Button>
           <Button size="sm" onClick={() => setNewOpen(true)}>
             <Plus className="w-4 h-4" />
-            New Portfolio
+            Nuevo Portfolio
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Stats Overview ──────────────────────────────────── */}
       {loading ? (
@@ -180,14 +194,19 @@ export default function DashboardPage() {
       )}
 
       {/* ── Portfolio Grid ───────────────────────────────────── */}
-      <div className="mb-4 flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.25 }}
+        className="mb-5 flex items-center justify-between"
+      >
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Your Portfolios</h2>
-          <p className="text-text-secondary text-sm">
-            {portfoliosWithStats.length} portfolio{portfoliosWithStats.length !== 1 ? 's' : ''} tracked
+          <h2 className="text-base font-semibold text-text-primary">Mis Portfolios</h2>
+          <p className="text-text-muted text-xs mt-0.5">
+            {portfoliosWithStats.length} {portfoliosWithStats.length === 1 ? 'portfolio' : 'portfolios'} activos
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -195,74 +214,93 @@ export default function DashboardPage() {
         </div>
       ) : portfoliosWithStats.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {portfoliosWithStats.map((p) => (
-            <PortfolioCard key={p.id} portfolio={p} />
+          {portfoliosWithStats.map((p, i) => (
+            <PortfolioCard key={p.id} portfolio={p} index={i} />
           ))}
-          {/* Add more portfolio card */}
-          <button
+          {/* Add portfolio card */}
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: portfoliosWithStats.length * 0.07, ease: 'easeOut' }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
             onClick={() => setNewOpen(true)}
-            className="border-2 border-dashed border-border hover:border-primary/40 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 text-text-muted hover:text-primary transition-all duration-200 min-h-[140px]"
+            className="border-2 border-dashed border-[rgba(255,255,255,0.08)] hover:border-primary/30 rounded-[20px] p-5
+              flex flex-col items-center justify-center gap-3 text-text-muted hover:text-primary
+              transition-colors duration-200 min-h-[200px] cursor-pointer group"
           >
-            <div className="w-10 h-10 bg-surface-2 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-2 group-hover:bg-primary/10 rounded-xl flex items-center justify-center transition-colors">
               <Plus className="w-5 h-5" />
             </div>
-            <span className="text-sm font-medium">Add Portfolio</span>
-          </button>
+            <div className="text-center">
+              <span className="text-sm font-medium block">Agregar Portfolio</span>
+              <span className="text-xs text-text-muted mt-0.5 block">Stocks, ETFs, crypto y más</span>
+            </div>
+          </motion.button>
         </div>
       ) : (
         /* ── Empty State ──────────────────────────────────────── */
-        <div className="text-center py-24">
-          <div className="w-20 h-20 bg-surface-2 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <TrendingUp className="w-10 h-10 text-text-muted" />
-          </div>
-          <h3 className="text-xl font-semibold text-text-primary mb-2">No portfolios yet</h3>
-          <p className="text-text-secondary text-sm mb-8 max-w-sm mx-auto">
-            Create your first portfolio to start tracking your investments. You can add stocks, ETFs, crypto, and more.
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="text-center py-24"
+        >
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-20 h-20 bg-primary/10 border border-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6"
+          >
+            <Sparkles className="w-9 h-9 text-primary" />
+          </motion.div>
+          <h3 className="text-xl font-semibold text-text-primary mb-2">Empezá a trackear</h3>
+          <p className="text-text-muted text-sm mb-8 max-w-sm mx-auto leading-relaxed">
+            Creá tu primer portfolio para ver el valor total, ganancias, dividendos y más en tiempo real.
           </p>
           <Button onClick={() => setNewOpen(true)}>
             <Plus className="w-4 h-4" />
-            Create Your First Portfolio
+            Crear mi primer portfolio
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* ── New Portfolio Modal ──────────────────────────────── */}
       <Modal
         isOpen={newOpen}
         onClose={() => { setNewOpen(false); setFormName(''); }}
-        title="Create New Portfolio"
+        title="Nuevo Portfolio"
         size="sm"
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <Input
-            label="Portfolio name *"
+            label="Nombre *"
             type="text"
-            placeholder="e.g. Robinhood, Crypto, Retirement"
+            placeholder="FolioNet, Crypto, Jubilación…"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
             required
             autoFocus
           />
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-1.5">Currency</label>
+            <label className="text-sm font-medium text-text-secondary block mb-1.5">Moneda</label>
             <select
               value={formCurrency}
               onChange={(e) => setFormCurrency(e.target.value)}
               className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
-              <option value="USD">USD — US Dollar</option>
+              <option value="USD">USD — Dólar estadounidense</option>
               <option value="EUR">EUR — Euro</option>
-              <option value="GBP">GBP — British Pound</option>
-              <option value="CAD">CAD — Canadian Dollar</option>
-              <option value="AUD">AUD — Australian Dollar</option>
+              <option value="GBP">GBP — Libra esterlina</option>
+              <option value="CAD">CAD — Dólar canadiense</option>
+              <option value="AUD">AUD — Dólar australiano</option>
+              <option value="ARS">ARS — Peso argentino</option>
             </select>
           </div>
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="secondary" onClick={() => { setNewOpen(false); setFormName(''); }} className="flex-1">
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" loading={creating} className="flex-1">
-              Create Portfolio
+              Crear Portfolio
             </Button>
           </div>
         </form>

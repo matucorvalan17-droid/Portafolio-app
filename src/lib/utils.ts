@@ -57,16 +57,11 @@ export function formatShares(value: number): string {
 
 export function getAssetTypeColor(assetType: string): string {
   switch (assetType.toLowerCase()) {
-    case 'stock':
-      return '#6366f1';
-    case 'crypto':
-      return '#f59e0b';
-    case 'etf':
-      return '#22c55e';
-    case 'fund':
-      return '#8b5cf6';
-    default:
-      return '#8888a8';
+    case 'stock':  return '#00e676';
+    case 'crypto': return '#ffb300';
+    case 'etf':    return '#00bfa5';
+    case 'fund':   return '#64b5f6';
+    default:       return '#555555';
   }
 }
 
@@ -85,19 +80,20 @@ export function getAssetTypeLabel(assetType: string): string {
   }
 }
 
+// Allocation chart palette — Revolut-inspired, vivid on dark backgrounds
 export const ALLOCATION_COLORS = [
-  '#6366f1',
-  '#8b5cf6',
-  '#a78bfa',
-  '#22c55e',
-  '#16a34a',
-  '#f59e0b',
-  '#f97316',
-  '#ef4444',
-  '#ec4899',
-  '#06b6d4',
-  '#0891b2',
-  '#14b8a6',
+  '#494fdf', // cobalt violet  (brand primary)
+  '#00a87e', // accent-teal
+  '#ec7e00', // accent-warning / orange
+  '#e61e49', // accent-pink
+  '#007bc2', // accent-light-blue
+  '#7b7ff5', // cobalt-violet light
+  '#4fc3f7', // sky blue
+  '#428619', // accent-light-green
+  '#e23b4a', // accent-danger / red
+  '#b09000', // accent-yellow
+  '#936d62', // accent-brown / copper
+  '#00c896', // teal-bright
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

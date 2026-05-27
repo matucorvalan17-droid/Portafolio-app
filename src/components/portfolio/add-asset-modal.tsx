@@ -37,6 +37,7 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
   const [avgCost,        setAvgCost]        = useState('');
   const [priceLoading,   setPriceLoading]   = useState(false);
   const [priceAutoFilled,setPriceAutoFilled]= useState(false);
+  const [fee,            setFee]            = useState('');
   const [broker,         setBroker]         = useState('');
   const [notes,          setNotes]          = useState('');
   const [loading,        setLoading]        = useState(false);
@@ -151,6 +152,7 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
           name,
           shares:       parseFloat(shares),
           avgCost:      parseFloat(avgCost),
+          fee:          fee ? parseFloat(fee) : 0,
           purchaseDate: purchaseDate || undefined,
           broker:       broker || undefined,
           assetType,
@@ -182,6 +184,7 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
     setShares('');
     setAvgCost('');
     setPriceAutoFilled(false);
+    setFee('');
     setBroker('');
     setNotes('');
     setError('');
@@ -240,7 +243,6 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
               <Badge variant={assetType as 'stock' | 'crypto' | 'etf' | 'fund'}>
                 {selectedTicker}
               </Badge>
-              <span className="text-xs text-text-secondary">{selectedName}</span>
             </div>
           )}
 
@@ -292,6 +294,15 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
             ))}
           </div>
         </div>
+
+        {/* Asset name */}
+        <Input
+          label="Asset Name"
+          type="text"
+          placeholder="e.g. SPDR S&P 500 ETF Trust"
+          value={selectedName}
+          onChange={(e) => setSelectedName(e.target.value)}
+        />
 
         {/* Purchase date */}
         <div>
@@ -347,6 +358,17 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
           </div>
         </div>
 
+        {/* Fee */}
+        <Input
+          label="Comisión / Fee (opcional)"
+          type="number"
+          placeholder="0.00"
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+          step="any"
+          min="0"
+        />
+
         {/* Broker */}
         <Input
           label="Broker (optional)"
@@ -373,13 +395,18 @@ export function AddAssetModal({ isOpen, onClose, portfolioId, onSuccess }: AddAs
         {/* Preview */}
         {shares && avgCost && (
           <div className="bg-surface rounded-xl p-3 border border-border">
-            <p className="text-xs text-text-muted mb-1">Cost basis preview</p>
+            <p className="text-xs text-text-muted mb-1">Costo total estimado</p>
             <p className="text-sm font-semibold text-text-primary">
-              ${(parseFloat(shares || '0') * parseFloat(avgCost || '0')).toLocaleString('en-US', {
+              ${(parseFloat(shares || '0') * parseFloat(avgCost || '0') + parseFloat(fee || '0')).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </p>
+            {fee && parseFloat(fee) > 0 && (
+              <p className="text-xs text-text-muted mt-0.5">
+                incluye ${parseFloat(fee).toFixed(2)} de comisión
+              </p>
+            )}
           </div>
         )}
 

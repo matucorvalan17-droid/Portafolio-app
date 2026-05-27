@@ -30,6 +30,7 @@
     "sonner": "^1.7.0",
     "tailwind-merge": "^2.5.4",
     "tsx": "^4.19.2",
+    "xlsx": "^0.18.5",
     "yahoo-finance2": "^2.13.2"
   },
   "devDependencies": {

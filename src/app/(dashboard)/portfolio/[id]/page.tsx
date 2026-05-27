@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft, Pencil, ImagePlus, X } from 'lucide-react';
+import { Plus, Upload, Trash2, RefreshCw, TrendingUp, TrendingDown, ArrowLeft, Pencil, ImagePlus, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { AssetTable } from '@/components/portfolio/asset-table';
-import { AddAssetModal } from '@/components/portfolio/add-asset-modal';
+import { TransactionHistory } from '@/components/portfolio/transaction-history';
+import { AddTransactionModal } from '@/components/portfolio/add-transaction-modal';
 import { EditAssetModal } from '@/components/portfolio/edit-asset-modal';
 import { ImportCSVModal } from '@/components/portfolio/import-csv-modal';
 import { AllocationChart } from '@/components/charts/allocation-chart';
@@ -29,10 +30,13 @@ export default function PortfolioPage() {
   const [pricesLoading,  setPricesLoading]  = useState(false);
   const [refreshing,     setRefreshing]     = useState(false);
 
+  const [activeTab,       setActiveTab]       = useState<'holdings' | 'transactions'>('holdings');
   const [addModalOpen,    setAddModalOpen]    = useState(false);
   const [editModalOpen,   setEditModalOpen]   = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [editingHolding,  setEditingHolding]  = useState<Holding | null>(null);
+  const [syncingDivs,     setSyncingDivs]     = useState(false);
+  const [divToast,        setDivToast]        = useState<string | null>(null);
 
   // Edit portfolio modal
   const [editPortfolioOpen,    setEditPortfolioOpen]    = useState(false);
@@ -86,16 +90,37 @@ export default function PortfolioPage() {
     }
   }, []);
 
+  const syncDividends = useCallback(async (silent = false) => {
+    if (!silent) setSyncingDivs(true);
+    try {
+      const res = await fetch(`/api/portfolios/${portfolioId}/sync-dividends`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.added > 0) {
+          setDivToast(`${data.added} dividendo${data.added > 1 ? 's' : ''} sincronizado${data.added > 1 ? 's' : ''} 🎉`);
+          setTimeout(() => setDivToast(null), 5000);
+          await fetchHoldings();
+        } else if (!silent) {
+          setDivToast('Sin dividendos nuevos');
+          setTimeout(() => setDivToast(null), 3000);
+        }
+      }
+    } catch { /* ignore */ }
+    finally { if (!silent) setSyncingDivs(false); }
+  }, [portfolioId, fetchHoldings]);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       await fetchPortfolio();
       const h = await fetchHoldings();
       await fetchPrices(h);
+      // Auto-sync dividends silently on every load
+      syncDividends(true);
     } finally {
       setLoading(false);
     }
-  }, [fetchPortfolio, fetchHoldings, fetchPrices]);
+  }, [fetchPortfolio, fetchHoldings, fetchPrices, syncDividends]);
 
   useEffect(() => {
     loadAll();
@@ -311,29 +336,75 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Holdings table */}
+      {/* Holdings / Transactions tabs */}
       <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-text-primary">Holdings</h2>
-            {pricesLoading && <Spinner size="sm" />}
+        {/* Tab bar */}
+        <div className="flex items-center justify-between px-6 py-0 border-b border-border">
+          <div className="flex items-center gap-1">
+            {([
+              { key: 'holdings',     label: 'Holdings'      },
+              { key: 'transactions', label: 'Transacciones' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+            {activeTab === 'holdings' && pricesLoading && <Spinner size="sm" className="ml-2" />}
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setAddModalOpen(true)}>
-            <Plus className="w-3.5 h-3.5" />
-            Add
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => syncDividends(false)}
+              loading={syncingDivs}
+              title="Sincronizar dividendos desde Yahoo Finance"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Dividendos
+            </Button>
+            {activeTab === 'holdings' && (
+              <Button size="sm" variant="ghost" onClick={() => setAddModalOpen(true)}>
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </Button>
+            )}
+          </div>
         </div>
-        <AssetTable
-          holdings={holdings}
-          quotes={quotes}
-          loading={pricesLoading}
-          onEdit={(holding) => { setEditingHolding(holding); setEditModalOpen(true); }}
-          onDelete={handleDeleteHolding}
-        />
+
+        {activeTab === 'holdings' ? (
+          <AssetTable
+            holdings={holdings}
+            quotes={quotes}
+            loading={pricesLoading}
+            onEdit={(holding) => { setEditingHolding(holding); setEditModalOpen(true); }}
+            onDelete={handleDeleteHolding}
+          />
+        ) : (
+          <TransactionHistory portfolioId={portfolioId} onHoldingsChanged={handleHoldingSuccess} />
+        )}
       </div>
 
+      {/* Dividend sync toast */}
+      {divToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-surface-2 border border-border px-4 py-3 rounded-2xl shadow-elevated animate-slide-up">
+          <Sparkles className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-sm text-text-primary">{divToast}</p>
+          <button onClick={() => setDivToast(null)} className="text-text-muted hover:text-text-primary ml-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Modals */}
-      <AddAssetModal
+      <AddTransactionModal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         portfolioId={portfolioId}

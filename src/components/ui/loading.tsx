@@ -20,7 +20,7 @@ export function Spinner({ className, size = 'md' }: LoadingProps) {
         sizes[size],
         className
       )}
-      style={{ borderTopColor: '#6366f1' }}
+      style={{ borderTopColor: '#494fdf' }}
     />
   );
 }

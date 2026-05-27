@@ -35,8 +35,8 @@ const features = [
     icon:  LineChart,
     title: 'Beautiful Analytics',
     description: 'Interactive charts show allocation, performance over time, top gainers, top losers, and sector breakdowns.',
-    color: 'text-purple-400',
-    bg:    'bg-purple-400/10',
+    color: 'text-[#ce93d8]',
+    bg:    'bg-[#ce93d8]/10',
   },
   {
     icon:  History,
@@ -87,7 +87,7 @@ export default function LandingPage() {
       <div className="fixed inset-0 grid-bg opacity-100 pointer-events-none" />
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
       </div>
 
       {/* ── Navigation ───────────────────────────────────────── */}
@@ -252,7 +252,7 @@ export default function LandingPage() {
       {/* ── CTA Section ──────────────────────────────────────── */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div className="glass-card rounded-3xl p-12 text-center border border-primary/20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-purple-500/5 to-primary/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/5 to-primary/5" />
           <div className="relative z-10">
             <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
               Ready to take control of your investments?
