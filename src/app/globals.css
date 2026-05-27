@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── COLOR TOKENS ─────────────────────────────────────────────── */
+/* ─── COLOR TOKENS (Revolut) ───────────────────────────────────── */
 :root {
-  --background: #050505;
-  --surface:    #0c0c0c;
-  --surface-2:  #131313;
-  --border:     #1e1e1e;
-  --primary:    #00e676;
+  --background: #000000;
+  --surface:    #0a0a0a;
+  --surface-2:  #16181a;
+  --border:     rgba(255,255,255,0.10);
+  --primary:    #494fdf;
 }
 
 /* ─── RESET ────────────────────────────────────────────────────── */
@@ -19,44 +19,40 @@ html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--background);
-  color: #f0f0f0;
+  color: #ffffff;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
 }
 
 /* ─── SCROLLBAR ────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #363636; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
 
 /* ─── GLASS CARD ───────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(12, 12, 12, 0.85);
+  background: rgba(22, 24, 26, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* ─── GRADIENT TEXT ────────────────────────────────────────────── */
+/* ─── GRADIENT TEXT (cobalt) ───────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #00e676 0%, #00bfa5 60%, #69f0ae 100%);
+  background: linear-gradient(135deg, #4f55f1 0%, #7b7ff5 60%, #494fdf 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ─── GLOW EFFECTS ─────────────────────────────────────────────── */
-.glow-primary { box-shadow: 0 0 32px rgba(0, 230, 118, 0.25); }
-.glow-gain    { box-shadow: 0 0 20px rgba(0, 230, 118, 0.15); }
-.glow-loss    { box-shadow: 0 0 20px rgba(255, 59, 48,  0.15); }
-
-/* ─── GRID BACKGROUND ──────────────────────────────────────────── */
+/* ─── SUBTLE GRID BACKGROUND ───────────────────────────────────── */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(0, 230, 118, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 230, 118, 0.025) 1px, transparent 1px);
+    linear-gradient(rgba(73, 79, 223, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(73, 79, 223, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -72,9 +68,9 @@ body {
 }
 
 @keyframes pulse-ring {
-  0%   { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(0, 230, 118, 0.5); }
-  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(0, 230, 118, 0);  }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(0, 230, 118, 0);  }
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(73, 79, 223, 0.5); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(73, 79, 223, 0);  }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(73, 79, 223, 0);  }
 }
 .pulse-ring { animation: pulse-ring 2s infinite; }
 
@@ -91,13 +87,13 @@ body {
   to   { opacity: 1; transform: translateX(0);    }
 }
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1);    }
 }
 
 .animate-fade-in     { animation: fadeIn       0.4s ease-out; }
 .animate-slide-right { animation: slideInRight 0.3s ease-out; }
-.animate-scale-in    { animation: scaleIn      0.3s ease-out; }
+.animate-scale-in    { animation: scaleIn      0.25s ease-out; }
 .animate-float       { animation: float        6s ease-in-out infinite; }
 
 /* ─── NUMBER FONT ──────────────────────────────────────────────── */
@@ -109,17 +105,17 @@ body {
 /* ─── SELECT ───────────────────────────────────────────────────── */
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555555' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238d969e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 30px;
 }
 
-/* ─── FOCUS RING ───────────────────────────────────────────────── */
+/* ─── FOCUS RING (cobalt) ──────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid rgba(0, 230, 118, 0.55);
+  outline: 2px solid rgba(73, 79, 223, 0.6);
   outline-offset: 2px;
 }
 
 /* ─── TABLE HOVER ──────────────────────────────────────────────── */
-.table-row-hover:hover { background-color: rgba(0, 230, 118, 0.03); }
+.table-row-hover:hover { background-color: rgba(255,255,255,0.025); }

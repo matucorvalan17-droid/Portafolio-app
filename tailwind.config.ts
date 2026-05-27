@@ -9,35 +9,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ── Backgrounds ───────────────────────────────────────────
-        background:      '#050505',   // pure near-black
-        surface:         '#0c0c0c',   // card / panel
-        'surface-2':     '#131313',   // slightly elevated surface
-        // ── Borders ───────────────────────────────────────────────
-        border:          '#1e1e1e',
-        'border-2':      '#2a2a2a',
-        // ── Brand (electric green) ────────────────────────────────
-        primary:         '#00e676',   // electric green — CTAs, links, focus
-        'primary-hover': '#00c85a',   // darker on hover
+        // ── Backgrounds (Revolut: canvas-dark / surface-elevated) ─
+        background:      '#000000',   // true black — canvas-dark
+        surface:         '#0a0a0a',   // surface-deep
+        'surface-2':     '#16181a',   // surface-elevated — plan cards, modals
+        // ── Borders (Revolut: hairline-dark) ──────────────────────
+        border:          'rgba(255,255,255,0.10)',
+        'border-2':      'rgba(255,255,255,0.18)',
+        // ── Brand (Revolut cobalt violet) ─────────────────────────
+        primary:         '#494fdf',   // cobalt violet — brand accent
+        'primary-hover': '#4f55f1',   // cobalt bright
+        'primary-deep':  '#3a40c4',   // cobalt deep (pressed)
         // ── Semantic ──────────────────────────────────────────────
-        gain:            '#00e676',   // profits — same green family as brand
-        loss:            '#ff3b30',   // losses — vivid iOS red
-        warning:         '#ffb300',   // amber warnings
+        gain:            '#00a87e',   // accent-teal — profits
+        loss:            '#e23b4a',   // accent-danger — losses
+        warning:         '#ec7e00',   // accent-warning — amber
         // ── Text ──────────────────────────────────────────────────
-        'text-primary':   '#f0f0f0',
-        'text-secondary': '#888888',
-        'text-muted':     '#505050',
+        'text-primary':   '#ffffff',
+        'text-secondary': 'rgba(255,255,255,0.72)',
+        'text-muted':     '#8d969e',   // stone
       },
 
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
 
+      borderRadius: {
+        'card': '20px',    // rounded.lg — feature-card, plan-card
+        'input': '12px',   // rounded.md — inputs, chips
+      },
+
       backgroundImage: {
         'gradient-radial':  'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #00e676 0%, #00bfa5 100%)',
-        'gradient-gain':    'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
-        'gradient-loss':    'linear-gradient(135deg, #ff3b30 0%, #d32f2f 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #494fdf 0%, #4f55f1 100%)',
+        'gradient-gain':    'linear-gradient(135deg, #00a87e 0%, #00c896 100%)',
+        'gradient-loss':    'linear-gradient(135deg, #e23b4a 0%, #c0262f 100%)',
       },
 
       animation: {
@@ -54,11 +60,10 @@ const config: Config = {
       },
 
       boxShadow: {
-        'glow-primary': '0 0 32px rgba(0, 230, 118, 0.28)',
-        'glow-gain':    '0 0 20px rgba(0, 230, 118, 0.18)',
-        'glow-loss':    '0 0 20px rgba(255, 59,  48,  0.18)',
-        'card':         '0 4px 24px rgba(0, 0, 0, 0.6)',
-        'card-hover':   '0 8px 40px rgba(0, 0, 0, 0.7)',
+        // Revolut has no drop-shadows — elevation via surface luminance only
+        'card':       '0 1px 0 rgba(255,255,255,0.06)',
+        'card-hover': '0 1px 0 rgba(255,255,255,0.10)',
+        'elevated':   '0 8px 32px rgba(0,0,0,0.6)',
       },
 
       backdropBlur: { xs: '2px' },

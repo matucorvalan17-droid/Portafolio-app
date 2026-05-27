@@ -7,13 +7,13 @@ interface BadgeProps {
 }
 
 const variantStyles = {
-  stock: 'bg-primary/10 text-primary border-primary/20',
-  crypto: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20',
-  etf: 'bg-gain/10 text-gain border-gain/20',
-  fund: 'bg-[#64b5f6]/10 text-[#64b5f6] border-[#64b5f6]/20',
-  gain: 'bg-gain/10 text-gain border-gain/20',
-  loss: 'bg-loss/10 text-loss border-loss/20',
-  default: 'bg-surface-2 text-text-secondary border-border',
+  stock:   'bg-primary/10 text-primary border-primary/25',
+  crypto:  'bg-[#ec7e00]/10 text-[#ec7e00] border-[#ec7e00]/25',
+  etf:     'bg-gain/10 text-gain border-gain/25',
+  fund:    'bg-[#007bc2]/10 text-[#007bc2] border-[#007bc2]/25',
+  gain:    'bg-gain/10 text-gain border-gain/25',
+  loss:    'bg-loss/10 text-loss border-loss/25',
+  default: 'bg-[rgba(255,255,255,0.06)] text-text-secondary border-[rgba(255,255,255,0.10)]',
 };
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
