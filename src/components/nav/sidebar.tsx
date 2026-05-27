@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   TrendingUp, LayoutDashboard, Briefcase, Settings, LogOut,
-  ChevronDown, Plus, History, Star, BarChart3, PanelLeftClose, PanelLeftOpen,
+  ChevronDown, Plus, History, Star, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Portfolio } from '@/types';
@@ -38,15 +38,14 @@ function Tooltip({ label, show }: { label: string; show: boolean }) {
 
 export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortfolio, onCollapsedChange }: SidebarProps) {
   const pathname         = usePathname();
-  const [collapsed,      setCollapsed]      = useState(false);
+  const [hovered,        setHovered]        = useState(false);
   const [portfoliosOpen, setPortfoliosOpen] = useState(true);
   const [tooltip,        setTooltip]        = useState('');
 
-  const toggle = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    onCollapsedChange?.(next);
-  };
+  const collapsed = !hovered;
+
+  // Always keep main content at ml-16 (sidebar overlays on hover, no layout shift)
+  useEffect(() => { onCollapsedChange?.(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isActive          = (href: string) => pathname === href;
   const isPortfolioActive = pathname.startsWith('/portfolio/');
@@ -54,10 +53,14 @@ export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortf
   const w = collapsed ? 'w-16' : 'w-64';
 
   return (
-    <aside className={cn(
-      'fixed left-0 top-0 h-full bg-surface border-r border-[rgba(255,255,255,0.08)] flex flex-col z-40 transition-all duration-300',
-      w
-    )}>
+    <aside
+      className={cn(
+        'fixed left-0 top-0 h-full bg-surface border-r border-[rgba(255,255,255,0.08)] flex flex-col z-50 transition-all duration-250',
+        w
+      )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setTooltip(''); }}
+    >
       {/* Logo */}
       <div className={cn('flex items-center border-b border-[rgba(255,255,255,0.08)] transition-all duration-300 h-16',
         collapsed ? 'justify-center px-0' : 'gap-2.5 px-5'
@@ -217,9 +220,8 @@ export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortf
         </div>
       </nav>
 
-      {/* Bottom: toggle + sign out */}
-      <div className="px-2 pb-3 pt-3 border-t border-[rgba(255,255,255,0.08)] space-y-0.5">
-        {/* Sign out */}
+      {/* Bottom: sign out */}
+      <div className="px-2 pb-3 pt-3 border-t border-[rgba(255,255,255,0.08)]">
         <div className="relative group" onMouseEnter={() => collapsed && setTooltip('signout')} onMouseLeave={() => setTooltip('')}>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
@@ -233,18 +235,6 @@ export function Sidebar({ portfolios, userName, userEmail, userImage, onNewPortf
           </button>
           {collapsed && <Tooltip label="Salir" show={tooltip === 'signout'} />}
         </div>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={toggle}
-          className={cn(
-            'flex items-center gap-3 rounded-xl text-sm font-medium text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all duration-150 w-full',
-            collapsed ? 'justify-center py-2.5 h-10' : 'px-3 py-2.5'
-          )}
-          title={collapsed ? 'Expandir menú' : 'Comprimir menú'}
-        >
-          {collapsed ? <PanelLeftOpen className="w-4 h-4 flex-shrink-0" /> : <><PanelLeftClose className="w-4 h-4 flex-shrink-0" />Comprimir</>}
-        </button>
       </div>
     </aside>
   );

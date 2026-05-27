@@ -115,8 +115,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onCollapsedChange={setSidebarCollapsed}
       />
 
-      {/* Main content — margin tracks sidebar width */}
-      <main className={`flex-1 min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+      {/* Main content — fixed ml-16, sidebar overlays on hover */}
+      <main className="flex-1 min-h-screen ml-16">
         <div className="max-w-7xl mx-auto px-6 py-8">
           {children}
         </div>
