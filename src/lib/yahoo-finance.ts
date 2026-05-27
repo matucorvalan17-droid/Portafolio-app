@@ -1,5 +1,10 @@
 import type { Quote, SearchResult, ChartDataPoint } from '@/types';
 
+export interface DividendEvent {
+  date: string;    // YYYY-MM-DD
+  amount: number;  // per share
+}
+
 const YF = 'https://query1.finance.yahoo.com';
 const YF2 = 'https://query2.finance.yahoo.com';
 
@@ -78,6 +83,32 @@ function mapType(t: string): string {
   if (s.includes('mutual') || s.includes('fund')) return 'fund';
   if (s.includes('crypto') || s.includes('currency')) return 'crypto';
   return 'stock';
+}
+
+export async function getDividendHistory(
+  ticker: string,
+  fromDate: Date,
+  toDate: Date = new Date(),
+): Promise<DividendEvent[]> {
+  const period1 = Math.floor(fromDate.getTime() / 1000);
+  const period2 = Math.floor(toDate.getTime() / 1000);
+  try {
+    const url = `${YF}/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${period1}&period2=${period2}&events=div&interval=1d`;
+    const res = await fetch(url, { headers: HEADERS, next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const dividends = json?.chart?.result?.[0]?.events?.dividends as
+      Record<string, { amount: number; date: number }> | undefined;
+    if (!dividends) return [];
+    return Object.values(dividends)
+      .map((d) => ({
+        date: new Date(d.date * 1000).toISOString().split('T')[0],
+        amount: d.amount,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  } catch {
+    return [];
+  }
 }
 
 export async function getHistoricalData(
