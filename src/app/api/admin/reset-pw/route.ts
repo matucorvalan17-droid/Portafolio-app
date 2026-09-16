@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const hashed = await hash('Mateo12@300', 12);
     await db.user.update({
-      where: { email: 'matucorvalan17@gmail.com' },
+      where: { email: 'mcorvalan1711@gmail.com' },
       data:  { password: hashed },
     });
     return NextResponse.json({ ok: true, msg: 'Contraseña reseteada. Ahora borrá esta ruta.' });
