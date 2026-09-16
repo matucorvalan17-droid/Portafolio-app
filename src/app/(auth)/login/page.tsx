@@ -68,8 +68,13 @@ export default function LoginPage() {
             required
             autoComplete="email"
           />
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-text-secondary">Password</label>
+            <Link href="/forgot-password" className="text-xs text-text-muted hover:text-primary transition-colors">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
           <Input
-            label="Password"
             type="password"
             placeholder="••••••••"
             value={password}
