@@ -28,13 +28,13 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password. Please try again.');
+        setError('Email o contraseña incorrectos. Intentá de nuevo.');
       } else {
         router.push('/dashboard');
         router.refresh();
       }
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError('Error inesperado. Intentá de nuevo.');
     } finally {
       setLoading(false);
     }
