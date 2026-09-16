@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     await resend.emails.send({
-      from:    'WealthTrack <noreply@wealthtrack.app>',
+      from:    'WealthTrack <onboarding@resend.dev>',
       to:      email,
       subject: 'Resetear contraseña — WealthTrack',
       html: `
