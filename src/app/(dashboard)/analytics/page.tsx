@@ -182,8 +182,8 @@ export default function AnalyticsPage() {
         <TabsContent value="performance" className="mt-6">
           {enriched.length > 0 && (
             <div className="glass-card rounded-2xl p-6 border border-border/50">
-              <h3 className="text-text-primary font-semibold mb-6">Portfolio Performance ({period})</h3>
-              <PerformanceChartWithPeriod ticker={enriched[0].ticker} totalValue={totalValue} />
+              <h3 className="text-text-primary font-semibold mb-6">Rendimiento vs S&P 500</h3>
+              <PerformanceChartWithPeriod ticker={enriched[0].ticker} totalValue={totalValue} initialPeriod={period} />
             </div>
           )}
         </TabsContent>

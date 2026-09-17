@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AreaChart,
   Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
@@ -21,7 +24,7 @@ interface PerformanceChartProps {
 
 interface TooltipProps {
   active?: boolean;
-  payload?: Array<{ value: number }>;
+  payload?: Array<{ value: number; name: string; color: string }>;
   label?: string;
 }
 
@@ -37,6 +40,29 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   return null;
 };
 
+interface BenchmarkTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string; color: string }>;
+  label?: string;
+}
+
+const BenchmarkTooltip = ({ active, payload, label }: BenchmarkTooltipProps) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-surface-2 border border-border rounded-xl px-4 py-3 shadow-card min-w-[160px]">
+      <p className="text-text-muted text-xs mb-2">{label}</p>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center justify-between gap-4">
+          <span className="text-xs" style={{ color: p.color }}>{p.name}</span>
+          <span className="text-xs font-semibold" style={{ color: p.color }}>
+            {p.value >= 0 ? '+' : ''}{p.value.toFixed(2)}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const PERIODS = [
   { label: '1M', value: '1mo' },
   { label: '3M', value: '3mo' },
@@ -50,6 +76,13 @@ interface PerformanceChartWithPeriodProps {
   ticker?: string;
   totalValue: number;
   currency?: string;
+  initialPeriod?: Period;
+}
+
+interface BenchmarkPoint {
+  date: string;
+  portfolio: number;
+  sp500: number;
 }
 
 export function PerformanceChart({ data, isLoading }: PerformanceChartProps) {
@@ -115,19 +148,51 @@ export function PerformanceChart({ data, isLoading }: PerformanceChartProps) {
   );
 }
 
-export function PerformanceChartWithPeriod({ ticker, totalValue, currency = 'USD' }: PerformanceChartWithPeriodProps) {
-  const [period, setPeriod] = useState<Period>('3mo');
-  const [data, setData] = useState<ChartDataPoint[]>([]);
+function normalize(points: ChartDataPoint[]): { date: string; pct: number }[] {
+  if (!points.length) return [];
+  const base = points[0].value;
+  if (base === 0) return [];
+  return points.map((p) => ({ date: p.date, pct: ((p.value - base) / base) * 100 }));
+}
+
+function mergeBenchmark(
+  portfolio: { date: string; pct: number }[],
+  sp500: { date: string; pct: number }[],
+): BenchmarkPoint[] {
+  const sp500Map = new Map(sp500.map((p) => [p.date, p.pct]));
+  return portfolio.map((p) => ({
+    date: p.date,
+    portfolio: parseFloat(p.pct.toFixed(2)),
+    sp500: parseFloat((sp500Map.get(p.date) ?? sp500Map.get(
+      [...sp500Map.keys()].reduce((best, k) =>
+        Math.abs(new Date(k).getTime() - new Date(p.date).getTime()) <
+        Math.abs(new Date(best).getTime() - new Date(p.date).getTime()) ? k : best
+      )
+    ) ?? 0).toFixed(2)),
+  }));
+}
+
+export function PerformanceChartWithPeriod({ ticker, totalValue, currency = 'USD', initialPeriod = '3mo' }: PerformanceChartWithPeriodProps) {
+  const [period, setPeriod] = useState<Period>(initialPeriod);
+  const [benchmarkData, setBenchmarkData] = useState<BenchmarkPoint[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showBenchmark, setShowBenchmark] = useState(true);
 
   const fetchData = async (p: Period) => {
     if (!ticker) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/prices/historical?ticker=${ticker}&period=${p}`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
+      const [portfolioRes, sp500Res] = await Promise.all([
+        fetch(`/api/prices/historical?ticker=${ticker}&period=${p}`),
+        fetch(`/api/prices/historical?ticker=SPY&period=${p}`),
+      ]);
+      if (portfolioRes.ok && sp500Res.ok) {
+        const [portfolioJson, sp500Json]: [ChartDataPoint[], ChartDataPoint[]] = await Promise.all([
+          portfolioRes.json(),
+          sp500Res.json(),
+        ]);
+        const merged = mergeBenchmark(normalize(portfolioJson), normalize(sp500Json));
+        setBenchmarkData(merged);
       }
     } catch {
       // ignore
@@ -136,27 +201,130 @@ export function PerformanceChartWithPeriod({ ticker, totalValue, currency = 'USD
     }
   };
 
+  // Auto-load on mount when ticker is available
+  useEffect(() => {
+    if (ticker) fetchData(initialPeriod);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticker]);
+
+  const isPositive = benchmarkData.length > 1
+    ? benchmarkData[benchmarkData.length - 1].portfolio >= 0
+    : true;
+  const portfolioColor = isPositive ? '#22c55e' : '#ef4444';
+  const sp500Color = '#6366f1';
+
+  const tickFmt = (val: string) => {
+    const d = new Date(val);
+    return `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}`;
+  };
+
   return (
     <div>
-      <div className="flex items-center gap-1 mb-4">
-        {PERIODS.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => {
-              setPeriod(p.value);
-              fetchData(p.value);
-            }}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-              period === p.value
-                ? 'bg-primary/20 text-primary'
-                : 'text-text-muted hover:text-text-primary'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-1">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => {
+                setPeriod(p.value);
+                fetchData(p.value);
+              }}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                period === p.value
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setShowBenchmark((v) => !v)}
+          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg transition-colors border ${
+            showBenchmark
+              ? 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10'
+              : 'border-border text-text-muted bg-surface-2'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full" style={{ background: sp500Color }} />
+          S&P 500
+        </button>
       </div>
-      <PerformanceChart data={data} currency={currency} isLoading={loading} />
+
+      {loading ? (
+        <div className="h-64 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      ) : benchmarkData.length === 0 ? (
+        <div className="h-64 flex items-center justify-center text-text-muted text-sm">
+          Select a period to load chart
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={benchmarkData} margin={{ top: 5, right: 8, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" vertical={false} />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: '#8888a8', fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              interval="preserveStartEnd"
+              tickFormatter={tickFmt}
+            />
+            <YAxis
+              tick={{ fill: '#8888a8', fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(0)}%`}
+              width={52}
+            />
+            <Tooltip content={<BenchmarkTooltip />} />
+            <Line
+              type="monotone"
+              dataKey="portfolio"
+              name="Cartera"
+              stroke={portfolioColor}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 0 }}
+            />
+            {showBenchmark && (
+              <Line
+                type="monotone"
+                dataKey="sp500"
+                name="S&P 500"
+                stroke={sp500Color}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
+              />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+
+      {benchmarkData.length > 0 && (
+        <div className="flex items-center gap-4 mt-3 justify-end">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-0.5 rounded" style={{ background: portfolioColor, display: 'inline-block' }} />
+            <span className="text-xs text-text-muted">Cartera</span>
+            <span className={`text-xs font-semibold ml-1 ${benchmarkData[benchmarkData.length - 1].portfolio >= 0 ? 'text-gain' : 'text-loss'}`}>
+              {benchmarkData[benchmarkData.length - 1].portfolio >= 0 ? '+' : ''}{benchmarkData[benchmarkData.length - 1].portfolio.toFixed(2)}%
+            </span>
+          </div>
+          {showBenchmark && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 rounded" style={{ background: sp500Color, display: 'inline-block' }} />
+              <span className="text-xs text-text-muted">S&P 500</span>
+              <span className={`text-xs font-semibold ml-1 ${benchmarkData[benchmarkData.length - 1].sp500 >= 0 ? 'text-gain' : 'text-loss'}`}>
+                {benchmarkData[benchmarkData.length - 1].sp500 >= 0 ? '+' : ''}{benchmarkData[benchmarkData.length - 1].sp500.toFixed(2)}%
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
