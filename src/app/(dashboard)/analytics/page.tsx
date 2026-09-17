@@ -24,10 +24,11 @@ type HoldingEnriched = Holding & {
 };
 
 export default function AnalyticsPage() {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
-  const [quotes,     setQuotes]     = useState<Record<string, Quote>>({});
-  const [loading,    setLoading]    = useState(true);
-  const [period,     setPeriod]     = useState<'1mo' | '3mo' | '6mo' | '1y'>('3mo');
+  const [portfolios,    setPortfolios]    = useState<Portfolio[]>([]);
+  const [quotes,        setQuotes]        = useState<Record<string, Quote>>({});
+  const [firstBuyDate,  setFirstBuyDate]  = useState<Date | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [period,        setPeriod]        = useState<'1mo' | '3mo' | '6mo' | '1y'>('3mo');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -41,6 +42,13 @@ export default function AnalyticsPage() {
       if (allTickers.length) {
         const priceRes = await fetch(`/api/prices?tickers=${allTickers.join(',')}`);
         if (priceRes.ok) setQuotes(await priceRes.json());
+      }
+
+      const txRes = await fetch('/api/transactions');
+      if (txRes.ok) {
+        const txs: { type: string; date: string }[] = await txRes.json();
+        const buys = txs.filter((t) => t.type === 'buy').map((t) => new Date(t.date));
+        if (buys.length) setFirstBuyDate(new Date(Math.min(...buys.map((d) => d.getTime()))));
       }
     } finally {
       setLoading(false);
@@ -66,9 +74,16 @@ export default function AnalyticsPage() {
     };
   });
 
-  const totalValue   = enriched.reduce((s, h) => s + h.currentValue, 0);
-  const totalCost    = enriched.reduce((s, h) => s + h.avgCost * h.shares, 0);
+  const totalValue    = enriched.reduce((s, h) => s + h.currentValue, 0);
+  const totalCost     = enriched.reduce((s, h) => s + h.avgCost * h.shares, 0);
   const totalGainLoss = totalValue - totalCost;
+
+  const cagr = (() => {
+    if (!firstBuyDate || totalCost <= 0 || totalValue <= 0) return null;
+    const years = (Date.now() - firstBuyDate.getTime()) / (365.25 * 24 * 3600 * 1000);
+    if (years < 0.01) return null;
+    return (Math.pow(totalValue / totalCost, 1 / years) - 1) * 100;
+  })();
 
   // ── Allocation by asset type ──────────────────────────────────
   const byType = enriched.reduce<Record<string, number>>((acc, h) => {
@@ -141,11 +156,12 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Portfolio Value', value: formatCurrency(totalValue), sub: `${formatCurrency(totalCost)} invested`, color: 'text-text-primary' },
-          { label: 'Total Return',    value: formatCurrency(totalGainLoss), sub: formatPercent(totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0), color: totalGainLoss >= 0 ? 'text-gain' : 'text-loss' },
-          { label: 'Holdings',        value: String(enriched.length), sub: `across ${portfolios.length} portfolio${portfolios.length !== 1 ? 's' : ''}`, color: 'text-text-primary' },
+          { label: 'Valor de cartera', value: formatCurrency(totalValue),    sub: `${formatCurrency(totalCost)} invertido`,                                              color: 'text-text-primary' },
+          { label: 'Retorno total',    value: formatCurrency(totalGainLoss), sub: formatPercent(totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0),                  color: totalGainLoss >= 0 ? 'text-gain' : 'text-loss' },
+          { label: 'CAGR anual',       value: cagr !== null ? `${cagr >= 0 ? '+' : ''}${cagr.toFixed(1)}%` : '—', sub: firstBuyDate ? `desde ${firstBuyDate.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}` : 'sin datos', color: cagr === null ? 'text-text-muted' : cagr >= 0 ? 'text-gain' : 'text-loss' },
+          { label: 'Posiciones',       value: String(enriched.length),       sub: `en ${portfolios.length} cartera${portfolios.length !== 1 ? 's' : ''}`,                color: 'text-text-primary' },
         ].map((s) => (
           <div key={s.label} className="glass-card rounded-2xl p-5 border border-border/50">
             <p className="text-text-secondary text-sm mb-1">{s.label}</p>
